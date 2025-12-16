@@ -1,0 +1,15 @@
+const foo = "bar";
+
+const obj = {
+  x: 100,
+  y: 32,
+  foo,
+  complex: {
+    foo: "'foo'",
+    bar: '"bar"',
+  },
+};
+
+println(42/3, foo);
+let f = object.complex.foo;
+foo = obj.foo() + 5;
