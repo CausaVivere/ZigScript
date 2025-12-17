@@ -1,3 +1,4 @@
+import { fatal, fatalFmt } from "../utils.ts";
 import {
   type Statement,
   type Program,
@@ -10,8 +11,10 @@ import {
   type ObjectLiteral,
   type CallExpression,
   type MemberExpression,
+  type FunctionDeclaration,
 } from "./ast.ts";
 import { tokenize, type Token, TokenType } from "./lexer";
+import { type FunctionCall } from "../runtime/values";
 
 export default class Parser {
   private tokens: Token[] = [];
@@ -34,8 +37,7 @@ export default class Parser {
     const prev = this.tokens.shift() as Token;
 
     if (!prev || prev.type !== type) {
-      console.error("Parser Error:\n", err, prev, " - Expecting: ", type);
-      process.exit(1);
+      fatalFmt("Parser Error:\n %s %o - Expecting: %s", err, prev, type);
     }
 
     return prev;
@@ -62,6 +64,8 @@ export default class Parser {
         return this.parse_var_decleration();
       case TokenType.Const:
         return this.parse_var_decleration();
+      case TokenType.Function:
+        return this.parse_function_declaration();
       default:
         const expr = this.parse_expression();
         // Consume optional semicolon after expression statements
@@ -70,6 +74,54 @@ export default class Parser {
         }
         return expr;
     }
+  }
+
+  private parse_function_declaration(): Statement {
+    this.eat(); // eat function keyword
+    const name = this.expect(
+      TokenType.Identifier,
+      "Expected function name following function keyword."
+    ).value;
+
+    const args = this.parse_args();
+
+    const params: string[] = [];
+
+    for (const arg of args) {
+      if (arg.kind !== "Identifier") {
+        fatalFmt("Function parameters must be identifiers.", arg);
+      }
+      params.push((arg as Identifier).symbol);
+    }
+
+    this.expect(
+      TokenType.OpenBrace,
+      "Expected function body following declaration"
+    );
+
+    const body: Statement[] = [];
+
+    while (
+      this.at().type !== TokenType.EOF &&
+      this.at().type !== TokenType.CloseBrace
+    ) {
+      body.push(this.parse_statement());
+    }
+
+    this.expect(
+      TokenType.CloseBrace,
+      "Closing brace expected inside function declaration."
+    );
+
+    const fn = {
+      body,
+      name,
+      parameters: params,
+      kind: "FunctionDeclaration",
+      arrow: false,
+    } as FunctionDeclaration;
+
+    return fn;
   }
 
   // LET Identifier;
@@ -87,8 +139,7 @@ export default class Parser {
       this.eat(); // eat the semicolon
 
       if (isConstant) {
-        console.error("Constant variable declarations must be initialized.");
-        process.exit(1);
+        fatal("Constant variable declarations must be initialized.");
       }
       return {
         kind: "VariableDeclaration",
@@ -304,10 +355,9 @@ export default class Parser {
         property = this.parse_primary_expression();
 
         if (property.kind !== "Identifier") {
-          console.error(
+          fatal(
             `Can not use dot operator without right hand side being a identifier`
           );
-          process.exit(1);
         }
       } else {
         // this allows obj[computedValue]
@@ -375,8 +425,7 @@ export default class Parser {
         return value;
       }
       default: {
-        console.error("Unexpected token found during parsing: ", this.at());
-        process.exit(1);
+        fatalFmt("Unexpected token found during parsing: %o", this.at());
       }
     }
   }

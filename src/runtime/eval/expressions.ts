@@ -1,14 +1,18 @@
 import type {
   AssignmentExpression,
   BinaryExpression,
+  CallExpression,
   Identifier,
   ObjectLiteral,
 } from "../../frontend/ast";
-import type Environment from "../environment";
+import { fatalFmt } from "../../utils";
+import Environment from "../environment";
 import { evaluate } from "../interpreter";
 import {
+  type FunctionValue,
+  type NativeFnValue,
   type NumberValue,
-  type ObjectVal,
+  type ObjectValue,
   type RuntimeValue,
   MK_NULL,
 } from "../values";
@@ -73,12 +77,10 @@ export function evaluate_assignment_expression(
   env: Environment
 ): RuntimeValue {
   if (node.assignee.kind !== "Identifier") {
-    console.error(
-      `Invalid Left Hand Side in Assignment Expression: ${JSON.stringify(
-        node.assignee
-      )}`
+    fatalFmt(
+      "Invalid Left Hand Side in Assignment Expression: %s",
+      JSON.stringify(node.assignee)
     );
-    process.exit(1);
   }
   const varName = (node.assignee as Identifier).symbol;
   return env.assignVar(varName, evaluate(node.value, env));
@@ -91,18 +93,60 @@ export function evaluate_object_expression(
   const object = {
     type: "object",
     properties: new Map<string, RuntimeValue>(),
-  } as ObjectVal;
+  } as ObjectValue;
 
   for (const { key, value } of obj.properties) {
     const RuntimeValue =
       value === undefined ? env.lookupVar(key) : evaluate(value, env);
 
     if (object.properties.has(key)) {
-      console.error(`Duplicate key '${key}' found in object literal.`);
-      process.exit(1);
+      fatalFmt("Duplicate key '%s' found in object literal.", key);
     }
     object.properties.set(key, RuntimeValue);
   }
 
   return object;
+}
+
+export function evaluate_call_expression(
+  expr: CallExpression,
+  env: Environment
+): RuntimeValue {
+  const args = expr.args.map((arg) => evaluate(arg, env));
+  const fn = evaluate(expr.caller, env);
+
+  if (fn.type === "native-fn") {
+    const result = (fn as NativeFnValue).call(args, env);
+    return result;
+  }
+
+  if (fn.type === "function") {
+    const func = fn as FunctionValue;
+
+    const scope = new Environment(func.declarationEnv);
+
+    // Verify arity of function
+    if (args.length !== func.parameters.length) {
+      fatalFmt(
+        "Function expects %d arguments but received %d",
+        func.parameters.length,
+        args.length
+      );
+    }
+
+    // Create the variables for the parameters list
+    for (let i = 0; i < func.parameters.length; i++) {
+      const varname = func.parameters[i];
+      scope.declareVar(varname!, args[i]!, false);
+    }
+
+    let result: RuntimeValue = MK_NULL();
+    for (const statement of func.body) {
+      result = evaluate(statement, scope);
+    }
+
+    return result;
+  }
+
+  fatalFmt("Can not call value that is not a function: ", JSON.stringify(fn));
 }

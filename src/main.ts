@@ -20,7 +20,6 @@ async function run(fileName: string) {
   const env = createGlobalEnvironment();
 
   const result = evaluate(program, env);
-  console.log(result);
 }
 
 function repl() {

@@ -1,10 +1,34 @@
-import { MK_BOOL, MK_NULL, type RuntimeValue } from "./values";
+import type { Env } from "bun";
+import { fatalFmt } from "../utils";
+import {
+  MK_BOOL,
+  MK_NATIVE_FN,
+  MK_NULL,
+  MK_NUMBER,
+  type RuntimeValue,
+} from "./values";
 
 export function createGlobalEnvironment() {
   const env = new Environment();
   env.declareVar("true", MK_BOOL(true), true);
   env.declareVar("false", MK_BOOL(false), true);
   env.declareVar("null", MK_NULL(), true);
+
+  // Define a native builtin method
+  env.declareVar(
+    "print",
+    MK_NATIVE_FN((args, scope) => {
+      console.log(...args);
+      return MK_NULL();
+    }),
+    true
+  );
+
+  const timeFunction = (args: RuntimeValue[], env: Environment) => {
+    return MK_NUMBER(Date.now());
+  };
+  env.declareVar("time", MK_NATIVE_FN(timeFunction), true);
+
   return env;
 }
 
@@ -26,8 +50,7 @@ export default class Environment {
     constant: boolean
   ): RuntimeValue {
     if (this.variables.has(varName)) {
-      console.error(`Variable ${varName} is already declared in this scope.`);
-      process.exit(1);
+      fatalFmt("Variable %s is already declared in this scope.", varName);
     }
     this.variables.set(varName, value);
 
@@ -40,8 +63,7 @@ export default class Environment {
   public assignVar(varName: string, value: RuntimeValue): RuntimeValue {
     const env = this.resolve(varName);
     if (env.constants.has(varName)) {
-      console.error(`Cannot assign to constant variable ${varName}.`);
-      process.exit(1);
+      fatalFmt("Cannot assign to constant variable %s.", varName);
     }
     env.variables.set(varName, value);
     return value;
@@ -57,8 +79,7 @@ export default class Environment {
       return this;
     }
     if (this.parent === undefined) {
-      console.error(`Cannot resolve ${varName} as it does not exist.`);
-      process.exit(1);
+      fatalFmt("Cannot resolve %s as it does not exist.", varName);
     }
 
     return this.parent.resolve(varName);

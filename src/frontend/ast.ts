@@ -4,6 +4,8 @@ export type NodeType =
   // Statements
   | "Program"
   | "VariableDeclaration"
+  | "FunctionDeclaration"
+
   // Expressions
   | "AssignmentExpr"
   | "BinaryExpr"
@@ -105,4 +107,12 @@ export interface Property extends Expression {
 export interface ObjectLiteral extends Expression {
   kind: "ObjectLiteral";
   properties: Property[];
+}
+
+export interface FunctionDeclaration extends Statement {
+  kind: "FunctionDeclaration";
+  parameters: string[]; // to be changed from string to support types and default values
+  name: string;
+  body: Statement[];
+  arrow: boolean;
 }

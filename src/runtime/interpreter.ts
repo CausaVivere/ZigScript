@@ -14,6 +14,8 @@ import type {
   AssignmentExpression,
   ObjectLiteral,
   StringLiteral,
+  CallExpression,
+  FunctionDeclaration,
 } from "../frontend/ast";
 import type Environment from "./environment";
 import {
@@ -21,11 +23,14 @@ import {
   evaluate_binary_expression,
   evaluate_assignment_expression,
   evaluate_object_expression,
+  evaluate_call_expression,
 } from "./eval/expressions";
 import {
+  evaluate_function_declaration,
   evaluate_program,
   evaluate_variable_declaration,
 } from "./eval/statements";
+import { fatalFmt } from "../utils";
 
 export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
   switch (astNode.kind) {
@@ -46,6 +51,8 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
     }
     case "ObjectLiteral":
       return evaluate_object_expression(astNode as ObjectLiteral, env);
+    case "CallExpr":
+      return evaluate_call_expression(astNode as CallExpression, env);
     case "BinaryExpr":
       return evaluate_binary_expression(astNode as BinaryExpression, env);
     case "AssignmentExpr":
@@ -61,12 +68,16 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
     case "VariableDeclaration": {
       return evaluate_variable_declaration(astNode as VariableDeclaration, env);
     }
+
+    case "FunctionDeclaration": {
+      return evaluate_function_declaration(astNode as FunctionDeclaration, env);
+    }
+
     default: {
-      console.error(
-        "This AST Node has not yet been implemented for interpretation",
+      fatalFmt(
+        "This AST Node has not yet been implemented for interpretation %s",
         JSON.stringify(astNode, null, 2)
       );
-      process.exit(1);
     }
   }
 }

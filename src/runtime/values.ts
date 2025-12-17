@@ -1,4 +1,14 @@
-export type ValueType = "null" | "number" | "boolean" | "string" | "object";
+import type { Statement } from "../frontend/ast";
+import type Environment from "./environment";
+
+export type ValueType =
+  | "null"
+  | "number"
+  | "boolean"
+  | "string"
+  | "object"
+  | "native-fn"
+  | "function";
 
 export interface RuntimeValue {
   type: ValueType;
@@ -24,9 +34,31 @@ export interface StringValue extends RuntimeValue {
   value: string;
 }
 
-export interface ObjectVal extends RuntimeValue {
+export interface ObjectValue extends RuntimeValue {
   type: "object";
   properties: Map<string, RuntimeValue>;
+}
+
+export type FunctionCall = (
+  args: RuntimeValue[],
+  env: Environment
+) => RuntimeValue;
+
+export interface NativeFnValue extends RuntimeValue {
+  type: "native-fn";
+  call: FunctionCall;
+}
+
+export interface FunctionValue extends RuntimeValue {
+  type: "function";
+  name: string;
+  parameters: string[];
+  declarationEnv: Environment;
+  body: Statement[];
+}
+
+export function MK_NATIVE_FN(call: FunctionCall) {
+  return { type: "native-fn", call } as NativeFnValue;
 }
 
 export function MK_NUMBER(n: number = 0): NumberValue {

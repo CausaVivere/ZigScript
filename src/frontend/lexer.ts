@@ -1,7 +1,17 @@
+import { fatalFmt } from "../utils";
+
 export enum TokenType {
+  // Literal Types
   Number,
   Identifier,
   String,
+
+  // Keywords
+  Let,
+  Const,
+  Function,
+
+  // Grouping and Operators
   Equals,
   BinaryOperator,
   Semicolon,
@@ -14,14 +24,14 @@ export enum TokenType {
   CloseBrace, // }
   OpenBracket, // [
   CloseBracket, // ]
-  Let,
-  Const,
-  EOF,
+
+  EOF, // End of File
 }
 
 const KEYWORDS: Record<string, TokenType> = {
   let: TokenType.Let,
   const: TokenType.Const,
+  function: TokenType.Function,
 };
 
 export interface Token {
@@ -146,8 +156,9 @@ export function tokenize(sourceCode: string): Token[] {
         } else if (isSkippable(char)) {
           src.shift(); // Skip the current character
         } else {
-          console.error("Unrecognized character found in source code: ", char);
-          process.exit(1);
+          // Use util fatal to avoid stack traces from throw
+          // and to provide a single exit point for fatal errors.
+          fatalFmt("Unrecognized character found in source code: %s", char);
         }
         break;
     }

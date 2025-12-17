@@ -1,7 +1,11 @@
-import type { Program, VariableDeclaration } from "../../frontend/ast";
+import type {
+  FunctionDeclaration,
+  Program,
+  VariableDeclaration,
+} from "../../frontend/ast";
 import type Environment from "../environment";
 import { evaluate } from "../interpreter";
-import { type RuntimeValue, MK_NULL } from "../values";
+import { type FunctionValue, type RuntimeValue, MK_NULL } from "../values";
 
 export function evaluate_program(
   program: Program,
@@ -24,4 +28,19 @@ export function evaluate_variable_declaration(
     ? evaluate(declaration.value, env)
     : MK_NULL();
   return env.declareVar(declaration.identifier, value, declaration.constant);
+}
+
+export function evaluate_function_declaration(
+  declaration: FunctionDeclaration,
+  env: Environment
+): RuntimeValue {
+  const fn = {
+    type: "function",
+    name: declaration.name,
+    parameters: declaration.parameters,
+    declarationEnv: env,
+    body: declaration.body,
+  } as FunctionValue;
+
+  return env.declareVar(declaration.name, fn, true);
 }
