@@ -37,14 +37,21 @@ const KEYWORDS: Record<string, TokenType> = {
 export interface Token {
   value: string;
   type: TokenType;
+  start: number;
+  end: number;
 }
 
-function token(value: string | undefined, type: TokenType): Token {
+function token(
+  value: string | undefined,
+  type: TokenType,
+  start: number,
+  end: number
+): Token {
   if (!value) {
     throw new Error("Token Value is undefined " + value + " " + type);
   }
 
-  return { value, type };
+  return { value, type, start, end };
 }
 
 function isAlpha(src: string): boolean {
@@ -58,6 +65,10 @@ function isInt(src: string): boolean {
   return c >= 48 && c <= 57; // '0' to '9'
 }
 
+function isAlphaNumeric(src: string): boolean {
+  return isAlpha(src) || isInt(src);
+}
+
 function isSkippable(str: string): boolean {
   return [" ", "\n", "\t"].includes(str);
 }
@@ -67,50 +78,89 @@ export function tokenize(sourceCode: string): Token[] {
   const tokens = new Array<Token>();
   const src = sourceCode.split("");
 
+  let position = 0; // Current character offset in source
+
   // Build each token until end of file
   while (src.length > 0) {
     const char = src[0]!;
+    const tokenStart = position;
+
+    // Handle single-line comments
+    if (char === "/" && src[1] === "/") {
+      // Skip until end of line
+      while (src.length > 0 && src[0] !== "\n") {
+        src.shift();
+        position++;
+      }
+      continue;
+    }
 
     switch (char) {
       case "(":
-        tokens.push(token(src.shift(), TokenType.OpenParen));
+        src.shift();
+        position++;
+        tokens.push(token("(", TokenType.OpenParen, tokenStart, position));
         break;
       case ")":
-        tokens.push(token(src.shift(), TokenType.CloseParen));
+        src.shift();
+        position++;
+        tokens.push(token(")", TokenType.CloseParen, tokenStart, position));
         break;
       case "{":
-        tokens.push(token(src.shift(), TokenType.OpenBrace));
+        src.shift();
+        position++;
+        tokens.push(token("{", TokenType.OpenBrace, tokenStart, position));
         break;
       case "}":
-        tokens.push(token(src.shift(), TokenType.CloseBrace));
+        src.shift();
+        position++;
+        tokens.push(token("}", TokenType.CloseBrace, tokenStart, position));
         break;
       case "[":
-        tokens.push(token(src.shift(), TokenType.OpenBracket));
+        src.shift();
+        position++;
+        tokens.push(token("[", TokenType.OpenBracket, tokenStart, position));
         break;
       case "]":
-        tokens.push(token(src.shift(), TokenType.CloseBracket));
+        src.shift();
+        position++;
+        tokens.push(token("]", TokenType.CloseBracket, tokenStart, position));
         break;
       case "+":
       case "-":
       case "*":
       case "/":
       case "%":
-        tokens.push(token(src.shift(), TokenType.BinaryOperator));
+        src.shift();
+        position++;
+        tokens.push(
+          token(char, TokenType.BinaryOperator, tokenStart, position)
+        );
         break;
       case "=":
-        tokens.push(token(src.shift(), TokenType.Equals));
+        src.shift();
+        position++;
+        tokens.push(token("=", TokenType.Equals, tokenStart, position));
         break;
       case ";":
-        tokens.push(token(src.shift(), TokenType.Semicolon));
+        src.shift();
+        position++;
+        tokens.push(token(";", TokenType.Semicolon, tokenStart, position));
         break;
       case ",":
-        tokens.push(token(src.shift(), TokenType.Comma));
+        src.shift();
+        position++;
+        tokens.push(token(",", TokenType.Comma, tokenStart, position));
         break;
       case ":":
-        tokens.push(token(src.shift(), TokenType.Colon));
+        src.shift();
+        position++;
+        tokens.push(token(":", TokenType.Colon, tokenStart, position));
         break;
       case ".":
-        tokens.push(token(src.shift(), TokenType.Dot));
+        src.shift();
+        position++;
+        tokens.push(token(".", TokenType.Dot, tokenStart, position));
         break;
       default:
         // Handle multicharacter tokens
@@ -118,60 +168,53 @@ export function tokenize(sourceCode: string): Token[] {
           let num = "";
           while (src.length > 0 && isInt(src[0]!)) {
             num += src.shift();
+            position++;
           }
-          tokens.push(token(num, TokenType.Number));
+          tokens.push(token(num, TokenType.Number, tokenStart, position));
         } else if (isAlpha(char)) {
           let ident = "";
-          while (src.length > 0 && isAlpha(src[0]!)) {
+          while (src.length > 0 && isAlphaNumeric(src[0]!)) {
             ident += src.shift();
+            position++;
           }
           // Check for reserved keywords
           const reserved = KEYWORDS[ident];
           if (typeof reserved === "number") {
-            tokens.push(token(ident, reserved));
+            tokens.push(token(ident, reserved, tokenStart, position));
           } else {
             // It's an identifier
-            tokens.push(token(ident, TokenType.Identifier));
+            tokens.push(
+              token(ident, TokenType.Identifier, tokenStart, position)
+            );
           }
         } else if (char === '"' || char === "'") {
-          if (src.length > 0 && src[0] === '"') {
-            // It's a string literal
-            src.shift(); // Remove opening quote
-            let strLit = "";
-            while (src.length > 0 && src[0] !== '"') {
-              strLit += src.shift();
-            }
-            src.shift(); // Remove closing quote
-            tokens.push(token(strLit, TokenType.String));
-          } else if (src.length > 0 && src[0] === "'") {
-            // It's a string literal with single quotes
-            src.shift(); // Remove opening quote
-            let strLit = "";
-            while (src.length > 0 && src[0] !== "'") {
-              strLit += src.shift();
-            }
-            src.shift(); // Remove closing quote
-            tokens.push(token(strLit, TokenType.String));
+          const quoteChar = char;
+          src.shift(); // Remove opening quote
+          position++;
+          let strLit = "";
+          while (src.length > 0 && src[0] !== quoteChar) {
+            const ch = src.shift()!;
+            strLit += ch;
+            position++;
           }
+          src.shift(); // Remove closing quote
+          position++;
+          tokens.push(token(strLit, TokenType.String, tokenStart, position));
         } else if (isSkippable(char)) {
           src.shift(); // Skip the current character
+          position++;
         } else {
-          // Use util fatal to avoid stack traces from throw
-          // and to provide a single exit point for fatal errors.
-          fatalFmt("Unrecognized character found in source code: %s", char);
+          fatalFmt(
+            tokenStart,
+            "Unrecognized character '%s' at position %d",
+            char,
+            position
+          );
         }
         break;
     }
   }
 
-  tokens.push(token("EOF", TokenType.EOF));
+  tokens.push(token("EOF", TokenType.EOF, position, position));
   return tokens;
 }
-
-// Test the lexer
-// const source = await Bun.file("./test.txt").text();
-// const tokens = tokenize(source);
-
-// for (const token of tokens) {
-//   console.log(token);
-// }

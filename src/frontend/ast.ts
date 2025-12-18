@@ -24,6 +24,8 @@ export type NodeType =
  They contain one or more expressions internally */
 export interface Statement {
   kind: NodeType;
+  start: number;
+  end: number;
 }
 
 /**

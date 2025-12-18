@@ -7,6 +7,7 @@ import {
   MK_NUMBER,
   type RuntimeValue,
 } from "./values";
+import type { Statement } from "../frontend/ast";
 
 export function createGlobalEnvironment() {
   const env = new Environment();
@@ -47,10 +48,15 @@ export default class Environment {
   public declareVar(
     varName: string,
     value: RuntimeValue,
-    constant: boolean
+    constant: boolean,
+    astNode?: Statement
   ): RuntimeValue {
     if (this.variables.has(varName)) {
-      fatalFmt("Variable %s is already declared in this scope.", varName);
+      fatalFmt(
+        astNode?.start ?? 0,
+        "Variable %s is already declared in this scope.",
+        varName
+      );
     }
     this.variables.set(varName, value);
 
@@ -60,28 +66,40 @@ export default class Environment {
     return value;
   }
 
-  public assignVar(varName: string, value: RuntimeValue): RuntimeValue {
-    const env = this.resolve(varName);
+  public assignVar(
+    varName: string,
+    value: RuntimeValue,
+    astNode?: Statement
+  ): RuntimeValue {
+    const env = this.resolve(varName, astNode);
     if (env.constants.has(varName)) {
-      fatalFmt("Cannot assign to constant variable %s.", varName);
+      fatalFmt(
+        astNode?.start ?? 0,
+        "Cannot assign to constant variable %s.",
+        varName
+      );
     }
     env.variables.set(varName, value);
     return value;
   }
 
-  public lookupVar(varName: string): RuntimeValue {
-    const env = this.resolve(varName);
+  public lookupVar(varName: string, astNode?: Statement): RuntimeValue {
+    const env = this.resolve(varName, astNode);
     return env.variables.get(varName)!;
   }
 
-  public resolve(varName: string): Environment {
+  public resolve(varName: string, astNode?: Statement): Environment {
     if (this.variables.has(varName)) {
       return this;
     }
     if (this.parent === undefined) {
-      fatalFmt("Cannot resolve %s as it does not exist.", varName);
+      fatalFmt(
+        astNode?.start ?? 0,
+        "Cannot resolve %s as it does not exist.",
+        varName
+      );
     }
 
-    return this.parent.resolve(varName);
+    return this.parent.resolve(varName, astNode);
   }
 }

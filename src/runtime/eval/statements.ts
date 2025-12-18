@@ -27,7 +27,12 @@ export function evaluate_variable_declaration(
   const value = declaration.value
     ? evaluate(declaration.value, env)
     : MK_NULL();
-  return env.declareVar(declaration.identifier, value, declaration.constant);
+  return env.declareVar(
+    declaration.identifier,
+    value,
+    declaration.constant,
+    declaration
+  );
 }
 
 export function evaluate_function_declaration(
@@ -42,5 +47,5 @@ export function evaluate_function_declaration(
     body: declaration.body,
   } as FunctionValue;
 
-  return env.declareVar(declaration.name, fn, true);
+  return env.declareVar(declaration.name, fn, true, declaration);
 }

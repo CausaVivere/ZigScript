@@ -37,7 +37,13 @@ export default class Parser {
     const prev = this.tokens.shift() as Token;
 
     if (!prev || prev.type !== type) {
-      fatalFmt("Parser Error:\n %s %o - Expecting: %s", err, prev, type);
+      fatalFmt(
+        prev.start,
+        "Parser Error Got: %s - Expecting: %s",
+        err,
+        prev?.value ?? "EOF",
+        TokenType[type]
+      );
     }
 
     return prev;
@@ -49,6 +55,8 @@ export default class Parser {
     const program: Program = {
       kind: "Program",
       body: [],
+      start: 0,
+      end: sourceCode.length,
     };
 
     while (this.not_eof()) {
@@ -89,7 +97,12 @@ export default class Parser {
 
     for (const arg of args) {
       if (arg.kind !== "Identifier") {
-        fatalFmt("Function parameters must be identifiers.", arg);
+        const tok = this.at();
+        fatalFmt(
+          tok.start,
+          "Function parameters must be identifiers: %s",
+          arg.kind
+        );
       }
       params.push((arg as Identifier).symbol);
     }
@@ -139,7 +152,11 @@ export default class Parser {
       this.eat(); // eat the semicolon
 
       if (isConstant) {
-        fatal("Constant variable declarations must be initialized.");
+        const tok = this.at();
+        fatalFmt(
+          tok.start,
+          "Constant variable declarations must be initialized"
+        );
       }
       return {
         kind: "VariableDeclaration",
@@ -195,6 +212,8 @@ export default class Parser {
         properties.push({
           key,
           kind: "Property",
+          start: this.at().start,
+          end: this.at().end,
         } as Property);
         continue;
       }
@@ -213,7 +232,13 @@ export default class Parser {
         "Expected ':' following object literal key."
       );
       const value = this.parse_expression();
-      properties.push({ kind: "Property", value, key });
+      properties.push({
+        kind: "Property",
+        value,
+        key,
+        start: this.at().start,
+        end: this.at().end,
+      });
 
       if (this.at().type !== TokenType.CloseBrace) {
         this.expect(
@@ -355,8 +380,10 @@ export default class Parser {
         property = this.parse_primary_expression();
 
         if (property.kind !== "Identifier") {
-          fatal(
-            `Can not use dot operator without right hand side being a identifier`
+          const tok = this.at();
+          fatalFmt(
+            tok.start,
+            "Cannot use dot operator without right hand side being an identifier"
           );
         }
       } else {
@@ -398,21 +425,30 @@ export default class Parser {
 
     switch (tk) {
       case TokenType.Identifier: {
+        const tok = this.eat();
         return {
           kind: "Identifier",
-          symbol: this.eat().value,
+          symbol: tok.value,
+          start: tok.start,
+          end: tok.end,
         } as Identifier;
       }
       case TokenType.Number: {
+        const tok = this.eat();
         return {
           kind: "NumericLiteral",
-          value: parseFloat(this.eat().value),
+          value: parseFloat(tok.value),
+          start: tok.start,
+          end: tok.end,
         } as Expression;
       }
       case TokenType.String: {
+        const tok = this.eat();
         return {
           kind: "StringLiteral",
-          value: this.eat().value,
+          value: tok.value,
+          start: tok.start,
+          end: tok.end,
         } as Expression;
       }
       case TokenType.OpenParen: {
@@ -425,7 +461,12 @@ export default class Parser {
         return value;
       }
       default: {
-        fatalFmt("Unexpected token found during parsing: %o", this.at());
+        const tok = this.at();
+        fatalFmt(
+          tok.start,
+          "Unexpected token '%s' found during parsing",
+          tok.value
+        );
       }
     }
   }

@@ -69,7 +69,7 @@ export function evaluate_identifier(
   ident: Identifier,
   env: Environment
 ): RuntimeValue {
-  return env.lookupVar(ident.symbol);
+  return env.lookupVar(ident.symbol, ident);
 }
 
 export function evaluate_assignment_expression(
@@ -78,12 +78,13 @@ export function evaluate_assignment_expression(
 ): RuntimeValue {
   if (node.assignee.kind !== "Identifier") {
     fatalFmt(
+      node.start,
       "Invalid Left Hand Side in Assignment Expression: %s",
       JSON.stringify(node.assignee)
     );
   }
   const varName = (node.assignee as Identifier).symbol;
-  return env.assignVar(varName, evaluate(node.value, env));
+  return env.assignVar(varName, evaluate(node.value, env), node);
 }
 
 export function evaluate_object_expression(
@@ -97,10 +98,10 @@ export function evaluate_object_expression(
 
   for (const { key, value } of obj.properties) {
     const RuntimeValue =
-      value === undefined ? env.lookupVar(key) : evaluate(value, env);
+      value === undefined ? env.lookupVar(key, obj) : evaluate(value, env);
 
     if (object.properties.has(key)) {
-      fatalFmt("Duplicate key '%s' found in object literal.", key);
+      fatalFmt(obj.start, "Duplicate key '%s' found in object literal.", key);
     }
     object.properties.set(key, RuntimeValue);
   }
@@ -128,6 +129,7 @@ export function evaluate_call_expression(
     // Verify arity of function
     if (args.length !== func.parameters.length) {
       fatalFmt(
+        expr.start,
         "Function expects %d arguments but received %d",
         func.parameters.length,
         args.length
@@ -137,7 +139,7 @@ export function evaluate_call_expression(
     // Create the variables for the parameters list
     for (let i = 0; i < func.parameters.length; i++) {
       const varname = func.parameters[i];
-      scope.declareVar(varname!, args[i]!, false);
+      scope.declareVar(varname!, args[i]!, false, expr);
     }
 
     let result: RuntimeValue = MK_NULL();
@@ -148,5 +150,9 @@ export function evaluate_call_expression(
     return result;
   }
 
-  fatalFmt("Can not call value that is not a function: ", JSON.stringify(fn));
+  fatalFmt(
+    expr.start,
+    "Can not call value that is not a function: ",
+    JSON.stringify(fn)
+  );
 }

@@ -8,12 +8,16 @@ import {
   type NumberValue,
 } from "./runtime/values";
 
+declare global {
+  var sourceCode: string;
+}
+
 // repl();
 run("./test.txt");
 
 async function run(fileName: string) {
   const sourceCode = await Bun.file(fileName).text();
-
+  globalThis.sourceCode = sourceCode;
   const parser = new Parser();
   const program = parser.produceAST(sourceCode);
 

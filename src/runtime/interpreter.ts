@@ -75,6 +75,7 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
 
     default: {
       fatalFmt(
+        astNode.start,
         "This AST Node has not yet been implemented for interpretation %s",
         JSON.stringify(astNode, null, 2)
       );
