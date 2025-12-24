@@ -5,12 +5,19 @@ export type NodeType =
   | "Program"
   | "VariableDeclaration"
   | "FunctionDeclaration"
+  | "ConditionalDeclaration"
+  | "Break"
+  | "Continue"
+  | "Return"
 
   // Expressions
   | "AssignmentExpr"
   | "BinaryExpr"
+  | "ComparisonExpr"
+  | "LogicalExpr"
   | "MemberExpr"
   | "CallExpr"
+  | "UnaryExpr"
 
   // Literals / Primary Expressions
   | "NumericLiteral"
@@ -44,6 +51,34 @@ export interface VariableDeclaration extends Statement {
   value?: Expression;
 }
 
+export interface FunctionDeclaration extends Statement {
+  kind: "FunctionDeclaration";
+  parameters: string[]; // to be changed from string to support types and default values
+  name: string;
+  body: Statement[];
+  arrow?: boolean;
+}
+
+export interface ConditionalDeclaration extends Statement {
+  kind: "ConditionalDeclaration";
+  condition: Expression;
+  body: Statement[];
+  alternate?: Statement[] | ConditionalDeclaration; // Either else block or else-if
+}
+
+export interface BreakStatement extends Statement {
+  kind: "Break";
+}
+
+export interface ContinueStatement extends Statement {
+  kind: "Continue";
+}
+
+export interface ReturnStatement extends Statement {
+  kind: "Return";
+  value: Expression;
+}
+
 /**  Expressions will result in a value at runtime unlike Statements */
 export interface Expression extends Statement {}
 
@@ -54,7 +89,21 @@ export interface Expression extends Statement {}
  */
 export interface BinaryExpression extends Expression {
   kind: "BinaryExpr";
-  operator: string;
+  operator: "+" | "-" | "*" | "/" | "%";
+  left: Expression;
+  right: Expression;
+}
+
+export interface ComparisonExpression extends Expression {
+  kind: "ComparisonExpr";
+  operator: "<" | "<=" | ">" | ">=" | "==" | "!=";
+  left: Expression;
+  right: Expression;
+}
+
+export interface LogicalExpression extends Expression {
+  kind: "LogicalExpr";
+  operator: "&&" | "||";
   left: Expression;
   right: Expression;
 }
@@ -111,10 +160,8 @@ export interface ObjectLiteral extends Expression {
   properties: Property[];
 }
 
-export interface FunctionDeclaration extends Statement {
-  kind: "FunctionDeclaration";
-  parameters: string[]; // to be changed from string to support types and default values
-  name: string;
-  body: Statement[];
-  arrow: boolean;
+export interface UnaryExpression extends Expression {
+  kind: "UnaryExpr";
+  operator: "-" | "+" | "!";
+  argument: Expression;
 }

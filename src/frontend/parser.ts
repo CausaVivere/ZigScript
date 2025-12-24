@@ -12,6 +12,11 @@ import {
   type CallExpression,
   type MemberExpression,
   type FunctionDeclaration,
+  type ConditionalDeclaration,
+  type ComparisonExpression,
+  type LogicalExpression,
+  type ReturnStatement,
+  type UnaryExpression,
 } from "./ast.ts";
 import { tokenize, type Token, TokenType } from "./lexer";
 import { type FunctionCall } from "../runtime/values";
@@ -74,6 +79,46 @@ export default class Parser {
         return this.parse_var_decleration();
       case TokenType.Function:
         return this.parse_function_declaration();
+      case TokenType.If:
+        return this.parse_conditional_declaration();
+      case TokenType.Break: {
+        const tok = this.eat();
+        this.expect(
+          TokenType.Semicolon,
+          "Expected ';' following break statement."
+        );
+        return {
+          kind: "Break",
+          start: tok.start,
+          end: tok.end,
+        } as Statement;
+      }
+      case TokenType.Continue: {
+        const tok = this.eat();
+        this.expect(
+          TokenType.Semicolon,
+          "Expected ';' following continue statement."
+        );
+        return {
+          kind: "Continue",
+          start: tok.start,
+          end: tok.end,
+        } as Statement;
+      }
+      case TokenType.Return: {
+        const tok = this.eat();
+        const returnStmt: ReturnStatement = {
+          kind: "Return",
+          value: this.parse_expression(),
+          start: tok.start,
+          end: this.at().end,
+        };
+        this.expect(
+          TokenType.Semicolon,
+          "Expected ';' following return statement."
+        );
+        return returnStmt;
+      }
       default:
         const expr = this.parse_expression();
         // Consume optional semicolon after expression statements
@@ -132,9 +177,84 @@ export default class Parser {
       parameters: params,
       kind: "FunctionDeclaration",
       arrow: false,
+      start: this.at().start,
+      end: this.at().end,
     } as FunctionDeclaration;
 
     return fn;
+  }
+
+  private parse_conditional_declaration(): Statement {
+    this.eat(); // advance past if word
+
+    this.expect(TokenType.OpenParen, "Expected '(' following 'if' keyword.");
+
+    const condition = this.parse_expression();
+
+    this.expect(
+      TokenType.CloseParen,
+      "Expected closing parenthesis following if condition."
+    );
+
+    this.expect(
+      TokenType.OpenBrace,
+      "Expected opening brace following if condition."
+    );
+
+    const body: Statement[] = [];
+
+    while (
+      this.at().type !== TokenType.EOF &&
+      this.at().type !== TokenType.CloseBrace
+    ) {
+      body.push(this.parse_statement());
+    }
+
+    this.expect(
+      TokenType.CloseBrace,
+      "Expected closing brace following if statement body."
+    );
+
+    let alternate: ConditionalDeclaration | Statement[] | undefined = undefined;
+
+    if (this.at().type === TokenType.Else) {
+      this.eat();
+
+      if (this.at().type === TokenType.If) {
+        // else if - recursively parse as ConditionalDeclaration
+        alternate =
+          this.parse_conditional_declaration() as ConditionalDeclaration;
+      } else {
+        // else block - just parse statements
+        this.expect(
+          TokenType.OpenBrace,
+          "Expected opening brace following else keyword."
+        );
+
+        const elseBody: Statement[] = [];
+        while (
+          this.at().type !== TokenType.EOF &&
+          this.at().type !== TokenType.CloseBrace
+        ) {
+          elseBody.push(this.parse_statement());
+        }
+
+        this.expect(
+          TokenType.CloseBrace,
+          "Expected closing brace following else statement body."
+        );
+        alternate = elseBody;
+      }
+    }
+
+    return {
+      kind: "ConditionalDeclaration",
+      condition,
+      body,
+      alternate,
+      start: condition.start,
+      end: condition.end,
+    } as ConditionalDeclaration;
   }
 
   // LET Identifier;
@@ -162,6 +282,8 @@ export default class Parser {
         kind: "VariableDeclaration",
         identifier,
         constant: false,
+        start: this.at().start,
+        end: this.at().end,
       } as VariableDeclaration;
     }
 
@@ -186,13 +308,97 @@ export default class Parser {
   }
 
   private parse_expression(): Expression {
-    return this.parse_assignment_expression(); // switch this out with object expression later
+    return this.parse_assignment_expression();
+  }
+
+  // Logical OR - lowest precedence logical operator
+  private parse_logical_or_expression(): Expression {
+    let left = this.parse_logical_and_expression();
+
+    while (this.at().value === "||") {
+      const operator = this.eat().value;
+      const right = this.parse_logical_and_expression();
+
+      left = {
+        kind: "LogicalExpr",
+        operator,
+        left,
+        right,
+        start: left.start,
+        end: right.end,
+      } as LogicalExpression;
+    }
+
+    return left;
+  }
+
+  // Logical AND - higher precedence than OR
+  private parse_logical_and_expression(): Expression {
+    let left = this.parse_equality_expression();
+
+    while (this.at().value === "&&") {
+      const operator = this.eat().value;
+      const right = this.parse_equality_expression();
+
+      left = {
+        kind: "LogicalExpr",
+        operator,
+        left,
+        right,
+        start: left.start,
+        end: right.end,
+      } as LogicalExpression;
+    }
+
+    return left;
+  }
+
+  // Equality (==, !=)
+  private parse_equality_expression(): Expression {
+    let left = this.parse_relational_expression();
+
+    while (["==", "!="].includes(this.at().value)) {
+      const operator = this.eat().value;
+      const right = this.parse_relational_expression();
+
+      left = {
+        kind: "ComparisonExpr",
+        operator,
+        left,
+        right,
+        start: left.start,
+        end: right.end,
+      } as ComparisonExpression;
+    }
+
+    return left;
+  }
+
+  // Relational (<, >, <=, >=)
+  private parse_relational_expression(): Expression {
+    let left = this.parse_additive_expression();
+
+    while (["<", ">", "<=", ">="].includes(this.at().value)) {
+      const operator = this.eat().value;
+      const right = this.parse_additive_expression();
+
+      left = {
+        kind: "ComparisonExpr",
+        operator,
+        left,
+        right,
+        start: left.start,
+        end: right.end,
+      } as ComparisonExpression;
+    }
+
+    return left;
   }
 
   private parse_object_expression(): Expression {
     // { Prop[] }
     if (this.at().type !== TokenType.OpenBrace) {
-      return this.parse_additive_expression();
+      return this.parse_logical_or_expression();
     }
 
     this.eat(); // advance past open brace.
@@ -288,7 +494,7 @@ export default class Parser {
   }
 
   private parse_multiplicative_expression(): Expression {
-    let left = this.parse_call_member_expression();
+    let left = this.parse_unary_expression();
 
     while (
       this.at().value === "*" ||
@@ -296,7 +502,7 @@ export default class Parser {
       this.at().value === "%"
     ) {
       const operator = this.eat().value;
-      const right = this.parse_primary_expression();
+      const right = this.parse_unary_expression();
       left = {
         kind: "BinaryExpr",
         operator,
@@ -306,6 +512,29 @@ export default class Parser {
     }
 
     return left;
+  }
+
+  private parse_unary_expression(): Expression {
+    // Check if current token is a unary operator
+    if (
+      this.at().value === "!" ||
+      this.at().value === "-" ||
+      this.at().value === "+"
+    ) {
+      const operator = this.eat();
+      const argument = this.parse_unary_expression(); // Recursive for multiple unaries: !!x, -(-5)
+
+      return {
+        kind: "UnaryExpr",
+        operator: operator.value,
+        argument,
+        start: operator.start,
+        end: argument.end,
+      } as UnaryExpression;
+    }
+
+    // Not a unary operator, continue to next precedence level
+    return this.parse_call_member_expression();
   }
 
   // foo.x()()

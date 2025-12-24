@@ -40,3 +40,14 @@ function sub() {
 
   let foo = 45;
 }
+
+
+print(-5 + 5);
+
+if(!(obj.x == 100)) {
+  print("X is one hundred.");
+} else if(obj.y == 32) {
+  print("Y is thirty two.");
+} else {
+  print("something is not right!")
+}

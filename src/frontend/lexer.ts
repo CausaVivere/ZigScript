@@ -10,10 +10,19 @@ export enum TokenType {
   Let,
   Const,
   Function,
+  Return,
+  If,
+  Else,
+  Continue,
+  Break,
 
   // Grouping and Operators
   Equals,
   BinaryOperator,
+  ComparisonOperator,
+  LogicalOperator,
+  Bang, // !
+  QuestionMark, // ?
   Semicolon,
   Comma,
   Dot,
@@ -32,6 +41,11 @@ const KEYWORDS: Record<string, TokenType> = {
   let: TokenType.Let,
   const: TokenType.Const,
   function: TokenType.Function,
+  return: TokenType.Return,
+  if: TokenType.If,
+  else: TokenType.Else,
+  continue: TokenType.Continue,
+  break: TokenType.Break,
 };
 
 export interface Token {
@@ -137,10 +151,124 @@ export function tokenize(sourceCode: string): Token[] {
           token(char, TokenType.BinaryOperator, tokenStart, position)
         );
         break;
+      case "<": {
+        src.shift();
+        position++;
+
+        if (src[0] === "=") {
+          const op = char + src.shift();
+          position++;
+          tokens.push(
+            token(op, TokenType.ComparisonOperator, tokenStart, position)
+          );
+        } else {
+          tokens.push(
+            token(char, TokenType.ComparisonOperator, tokenStart, position)
+          );
+        }
+        break;
+      }
+      case ">": {
+        src.shift();
+        position++;
+
+        if (src[0] === "=") {
+          const op = char + src.shift();
+          position++;
+          tokens.push(
+            token(op, TokenType.ComparisonOperator, tokenStart, position)
+          );
+        } else {
+          tokens.push(
+            token(char, TokenType.ComparisonOperator, tokenStart, position)
+          );
+        }
+        break;
+      }
+      case "!": {
+        src.shift();
+        position++;
+
+        if (src[0] === "=") {
+          const op = "!=";
+          src.shift();
+          position++;
+          tokens.push(
+            token(op, TokenType.ComparisonOperator, tokenStart, position)
+          );
+        } else {
+          tokens.push(token("!", TokenType.Bang, tokenStart, position));
+        }
+        break;
+      }
       case "=":
         src.shift();
         position++;
-        tokens.push(token("=", TokenType.Equals, tokenStart, position));
+
+        if (src[0] === "=") {
+          // It's a comparison operator
+          const op = char + src.shift();
+          position++;
+          tokens.push(
+            token(op, TokenType.ComparisonOperator, tokenStart, position)
+          );
+        } else {
+          tokens.push(token("=", TokenType.Equals, tokenStart, position));
+        }
+        break;
+      case "&":
+        src.shift();
+        position++;
+
+        if (src[0] === "&") {
+          const op = "&&";
+          src.shift();
+          position++;
+          tokens.push(
+            token(op, TokenType.LogicalOperator, tokenStart, position)
+          );
+        } else {
+          fatalFmt(
+            tokenStart,
+            "Unrecognized character '&' at position %d",
+            position
+          );
+        }
+        break;
+      case "|":
+        src.shift();
+        position++;
+
+        if (src[0] === "|") {
+          const op = "||";
+          src.shift();
+          position++;
+          tokens.push(
+            token(op, TokenType.LogicalOperator, tokenStart, position)
+          );
+        } else {
+          fatalFmt(
+            tokenStart,
+            "Unrecognized character '|' at position %d",
+            position
+          );
+        }
+        break;
+      case "?":
+        src.shift();
+        position++;
+
+        if (src[0] === "?") {
+          const op = "??";
+          src.shift();
+          position++;
+          tokens.push(
+            token(op, TokenType.LogicalOperator, tokenStart, position)
+          );
+          break;
+        }
+
+        tokens.push(token("?", TokenType.QuestionMark, tokenStart, position));
         break;
       case ";":
         src.shift();

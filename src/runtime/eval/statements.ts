@@ -1,4 +1,5 @@
 import type {
+  ConditionalDeclaration,
   FunctionDeclaration,
   Program,
   VariableDeclaration,

@@ -1,20 +1,30 @@
+import type { Env } from "bun";
 import type {
   AssignmentExpression,
   BinaryExpression,
   CallExpression,
+  ComparisonExpression,
+  ConditionalDeclaration,
   Identifier,
+  LogicalExpression,
+  MemberExpression,
   ObjectLiteral,
+  Statement,
 } from "../../frontend/ast";
 import { fatalFmt } from "../../utils";
 import Environment from "../environment";
 import { evaluate } from "../interpreter";
 import {
+  type BooleanValue,
   type FunctionValue,
   type NativeFnValue,
   type NumberValue,
   type ObjectValue,
   type RuntimeValue,
+  type StringValue,
+  MK_BOOL,
   MK_NULL,
+  MK_NUMBER,
 } from "../values";
 
 export function evaluate_numeric_binary_expression(
@@ -109,6 +119,41 @@ export function evaluate_object_expression(
   return object;
 }
 
+export function evaluate_member_expression(
+  expr: MemberExpression,
+  env: Environment
+): RuntimeValue {
+  const object = evaluate(expr.object, env);
+  if (object.type !== "object") {
+    fatalFmt(
+      expr.start,
+      "Cannot access property '%s' of non-object",
+      expr.property
+    );
+  }
+
+  if (expr.property.kind !== "Identifier") {
+    fatalFmt(
+      expr.start,
+      "Cannot access property '%s' of non-identifier",
+      expr.property
+    );
+  }
+
+  const prop = (object as ObjectValue).properties.get(
+    (expr.property as Identifier).symbol
+  );
+  if (!prop) {
+    fatalFmt(
+      expr.start,
+      "Property '%s' does not exist on object",
+      (expr.property as Identifier).symbol
+    );
+  }
+
+  return prop;
+}
+
 export function evaluate_call_expression(
   expr: CallExpression,
   env: Environment
@@ -155,4 +200,249 @@ export function evaluate_call_expression(
     "Can not call value that is not a function: ",
     JSON.stringify(fn)
   );
+}
+
+export function evaluate_comparison_expression(
+  expr: ComparisonExpression,
+  env: Environment
+): RuntimeValue {
+  const left = evaluate(expr.left, env);
+  const right = evaluate(expr.right, env);
+
+  if (left.type !== right.type) {
+    fatalFmt(
+      expr.start,
+      "Cannot compare different types: %s and %s",
+      left.type,
+      right.type
+    );
+  }
+
+  // For now, handle numeric comparisons
+  if (left.type === "number" && right.type === "number") {
+    const lhs = (left as NumberValue).value;
+    const rhs = (right as NumberValue).value;
+
+    let result: boolean;
+    switch (expr.operator) {
+      case "==":
+        result = lhs === rhs;
+        break;
+      case "!=":
+        result = lhs !== rhs;
+        break;
+      case "<":
+        result = lhs < rhs;
+        break;
+      case ">":
+        result = lhs > rhs;
+        break;
+      case "<=":
+        result = lhs <= rhs;
+        break;
+      case ">=":
+        result = lhs >= rhs;
+        break;
+      default:
+        fatalFmt(expr.start, "Unknown comparison operator: %s", expr.operator);
+    }
+
+    return MK_BOOL(result);
+  } else if (left.type === "string" && right.type === "string") {
+    const lhs = (left as StringValue).value;
+    const rhs = (right as StringValue).value;
+
+    let result: boolean;
+    switch (expr.operator) {
+      case "==":
+        result = lhs === rhs;
+        break;
+      case "!=":
+        result = lhs !== rhs;
+        break;
+      case "<":
+        result = lhs < rhs;
+        break;
+      case ">":
+        result = lhs > rhs;
+        break;
+      case "<=":
+        result = lhs <= rhs;
+        break;
+      case ">=":
+        result = lhs >= rhs;
+        break;
+      default:
+        fatalFmt(
+          expr.start,
+          "Unsupported string comparison operator: %s",
+          expr.operator
+        );
+    }
+
+    return MK_BOOL(result);
+  } else if (left.type === "boolean" && right.type === "boolean") {
+    // Only allow equality checks on booleans, not relational operators
+    const lhs = (left as BooleanValue).value;
+    const rhs = (right as BooleanValue).value;
+
+    let result: boolean;
+    switch (expr.operator) {
+      case "==":
+        result = lhs === rhs;
+        break;
+      case "!=":
+        result = lhs !== rhs;
+        break;
+      case "<":
+      case ">":
+      case "<=":
+      case ">=":
+        fatalFmt(
+          expr.start,
+          "Relational operators (%s) are not allowed on boolean values. Use == or != instead.",
+          expr.operator
+        );
+      default:
+        fatalFmt(
+          expr.start,
+          "Unsupported boolean comparison operator: %s for expression of kind %s",
+          expr.operator,
+          expr.kind
+        );
+    }
+
+    return MK_BOOL(result);
+  }
+
+  // All other type combinations are not supported
+  fatalFmt(
+    expr.start,
+    "Cannot compare types: %s and %s",
+    left.type,
+    right.type
+  );
+}
+
+export function evaluate_logical_expression(
+  expr: LogicalExpression,
+  env: Environment
+): RuntimeValue {
+  const left = evaluate(expr.left, env);
+
+  // Short-circuit evaluation for &&
+  if (expr.operator === "&&") {
+    // If left is falsy, don't evaluate right
+    if (!is_truthy(left)) {
+      return MK_BOOL(false);
+    }
+    const right = evaluate(expr.right, env);
+    return MK_BOOL(is_truthy(right));
+  }
+
+  // Short-circuit evaluation for ||
+  if (expr.operator === "||") {
+    // If left is truthy, don't evaluate right
+    if (is_truthy(left)) {
+      return MK_BOOL(true);
+    }
+    const right = evaluate(expr.right, env);
+    return MK_BOOL(is_truthy(right));
+  }
+
+  fatalFmt(expr.start, "Unknown logical operator: %s", expr.operator);
+}
+
+// Helper function to determine truthiness
+function is_truthy(value: RuntimeValue): boolean {
+  switch (value.type) {
+    case "null":
+      return false;
+    case "boolean":
+      return (value as BooleanValue).value;
+    case "number":
+      return (value as NumberValue).value !== 0;
+    case "string":
+      return (value as StringValue).value !== "";
+    default:
+      return true; // Objects, functions are truthy
+  }
+}
+
+export function evaluate_conditional_declaration(
+  expr: ConditionalDeclaration,
+  env: Environment
+): RuntimeValue {
+  const conditionValue = evaluate(expr.condition, env);
+
+  // Use truthiness to determine which branch to take
+  if (is_truthy(conditionValue)) {
+    // Execute 'if' body
+    let result: RuntimeValue = MK_NULL();
+    for (const statement of expr.body) {
+      result = evaluate(statement, env);
+    }
+    return result;
+  }
+
+  // No else/else-if, return null
+  if (!expr.alternate) {
+    return MK_NULL();
+  }
+
+  // Handle else-if (recursive)
+  if (!Array.isArray(expr.alternate)) {
+    return evaluate_conditional_declaration(
+      expr.alternate as ConditionalDeclaration,
+      env
+    );
+  }
+
+  // Handle else block
+  let result: RuntimeValue = MK_NULL();
+  for (const statement of expr.alternate) {
+    result = evaluate(statement, env);
+  }
+  return result;
+}
+
+// In expressions.ts
+import type { UnaryExpression } from "../../frontend/ast";
+
+export function evaluate_unary_expression(
+  expr: UnaryExpression,
+  env: Environment
+): RuntimeValue {
+  const argument = evaluate(expr.argument, env);
+
+  switch (expr.operator) {
+    case "!": {
+      // Logical NOT - convert to boolean and negate
+      return MK_BOOL(!is_truthy(argument));
+    }
+    case "-": {
+      // Numeric negation
+      if (argument.type !== "number") {
+        fatalFmt(
+          expr.start,
+          "Cannot negate non-numeric value: %s",
+          argument.type
+        );
+      }
+      return MK_NUMBER(-(argument as NumberValue).value);
+    }
+    case "+": {
+      // Numeric plus (usually just returns the number)
+      if (argument.type !== "number") {
+        fatalFmt(
+          expr.start,
+          "Cannot apply unary + to non-numeric value: %s",
+          argument.type
+        );
+      }
+      return argument; // Just return as-is
+    }
+    default:
+      fatalFmt(expr.start, "Unknown unary operator: %s", expr.operator);
+  }
 }

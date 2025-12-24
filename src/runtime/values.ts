@@ -8,7 +8,8 @@ export type ValueType =
   | "string"
   | "object"
   | "native-fn"
-  | "function";
+  | "function"
+  | "conditional";
 
 export interface RuntimeValue {
   type: ValueType;

@@ -16,6 +16,11 @@ import type {
   StringLiteral,
   CallExpression,
   FunctionDeclaration,
+  ConditionalDeclaration,
+  ComparisonExpression,
+  MemberExpression,
+  LogicalExpression,
+  UnaryExpression,
 } from "../frontend/ast";
 import type Environment from "./environment";
 import {
@@ -24,6 +29,11 @@ import {
   evaluate_assignment_expression,
   evaluate_object_expression,
   evaluate_call_expression,
+  evaluate_conditional_declaration,
+  evaluate_comparison_expression,
+  evaluate_member_expression,
+  evaluate_logical_expression,
+  evaluate_unary_expression,
 } from "./eval/expressions";
 import {
   evaluate_function_declaration,
@@ -60,6 +70,10 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
         astNode as AssignmentExpression,
         env
       );
+
+    case "MemberExpr":
+      return evaluate_member_expression(astNode as MemberExpression, env);
+
     case "Program":
       return evaluate_program(astNode as Program, env);
 
@@ -72,6 +86,26 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
     case "FunctionDeclaration": {
       return evaluate_function_declaration(astNode as FunctionDeclaration, env);
     }
+
+    case "ConditionalDeclaration": {
+      return evaluate_conditional_declaration(
+        astNode as ConditionalDeclaration,
+        env
+      );
+    }
+
+    case "ComparisonExpr": {
+      return evaluate_comparison_expression(
+        astNode as ComparisonExpression,
+        env
+      );
+    }
+
+    case "LogicalExpr":
+      return evaluate_logical_expression(astNode as LogicalExpression, env);
+
+    case "UnaryExpr":
+      return evaluate_unary_expression(astNode as UnaryExpression, env);
 
     default: {
       fatalFmt(
