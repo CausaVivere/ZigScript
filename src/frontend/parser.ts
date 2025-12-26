@@ -17,9 +17,10 @@ import {
   type LogicalExpression,
   type ReturnStatement,
   type UnaryExpression,
+  type WhileDeclaration,
+  type BreakStatement,
 } from "./ast.ts";
 import { tokenize, type Token, TokenType } from "./lexer";
-import { type FunctionCall } from "../runtime/values";
 
 export default class Parser {
   private tokens: Token[] = [];
@@ -81,8 +82,24 @@ export default class Parser {
         return this.parse_function_declaration();
       case TokenType.If:
         return this.parse_conditional_declaration();
+      case TokenType.While:
+        return this.parse_while_declaration();
       case TokenType.Break: {
         const tok = this.eat();
+        if (this.at().type !== TokenType.Semicolon) {
+          const value = this.parse_statement();
+          this.expect(
+            TokenType.Semicolon,
+            "Expected ';' following break statement."
+          );
+
+          return {
+            kind: "Break",
+            value,
+            start: tok.start,
+            end: this.at().end,
+          } as BreakStatement;
+        }
         this.expect(
           TokenType.Semicolon,
           "Expected ';' following break statement."
@@ -91,7 +108,7 @@ export default class Parser {
           kind: "Break",
           start: tok.start,
           end: tok.end,
-        } as Statement;
+        } as BreakStatement;
       }
       case TokenType.Continue: {
         const tok = this.eat();
@@ -127,6 +144,68 @@ export default class Parser {
         }
         return expr;
     }
+  }
+
+  private parse_while_declaration(): Statement {
+    this.eat(); // eat the while keyword
+
+    this.expect(
+      TokenType.OpenParen,
+      "Open parenthesis expected after while keyword."
+    );
+
+    let condition = this.parse_expression();
+
+    this.expect(
+      TokenType.CloseParen,
+      "Close Parenthesis expected after while loop condition."
+    );
+
+    let conditionExpression: Expression | undefined = undefined;
+
+    if (this.at().type == TokenType.Colon) {
+      this.eat(); // eat the colon
+
+      this.expect(
+        TokenType.OpenParen,
+        "Open parenthesis expected after colon for continue expression."
+      );
+
+      conditionExpression = this.parse_expression();
+
+      this.expect(
+        TokenType.CloseParen,
+        "Close parenthesis expected after while loop continue expression."
+      );
+    }
+
+    this.expect(
+      TokenType.OpenBrace,
+      "Open brace expected for while loop body."
+    );
+
+    let body: Statement[] = [];
+
+    while (
+      this.at().type !== TokenType.EOF &&
+      this.at().type !== TokenType.CloseBrace
+    ) {
+      body.push(this.parse_statement());
+    }
+
+    this.expect(
+      TokenType.CloseBrace,
+      "Close brace expected for while loop body."
+    );
+
+    return {
+      kind: "WhileDeclaration",
+      condition,
+      continueExpr: conditionExpression,
+      body,
+      start: condition.start,
+      end: this.at().end,
+    } as WhileDeclaration;
   }
 
   private parse_function_declaration(): Statement {
@@ -196,24 +275,25 @@ export default class Parser {
       "Expected closing parenthesis following if condition."
     );
 
-    this.expect(
-      TokenType.OpenBrace,
-      "Expected opening brace following if condition."
-    );
+    let body: Statement[] = [];
 
-    const body: Statement[] = [];
+    if (this.at().type == TokenType.OpenBrace) {
+      this.eat();
 
-    while (
-      this.at().type !== TokenType.EOF &&
-      this.at().type !== TokenType.CloseBrace
-    ) {
-      body.push(this.parse_statement());
+      while (
+        this.at().type !== TokenType.EOF &&
+        this.at().type !== TokenType.CloseBrace
+      ) {
+        body.push(this.parse_statement());
+      }
+
+      this.expect(
+        TokenType.CloseBrace,
+        "Expected closing brace following if statement body."
+      );
+    } else {
+      body = [this.parse_statement()];
     }
-
-    this.expect(
-      TokenType.CloseBrace,
-      "Expected closing brace following if statement body."
-    );
 
     let alternate: ConditionalDeclaration | Statement[] | undefined = undefined;
 

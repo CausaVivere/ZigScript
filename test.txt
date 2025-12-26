@@ -51,3 +51,20 @@ if(!(obj.x == 100)) {
 } else {
   print("something is not right!")
 }
+
+
+if(obj.x == 100) {print("It's true");}
+
+function test_while_loop(i){
+  while(i < 1000) : (i = i + 1) {
+    if(i==2) continue;
+    else if(i==5) break;
+    print(i);
+  }
+
+  return "While loop works!";
+}
+
+print(test_while_loop(1));
+
+print(obj["foo"]);

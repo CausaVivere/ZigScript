@@ -10,6 +10,7 @@ import type {
   MemberExpression,
   ObjectLiteral,
   Statement,
+  UnaryExpression,
 } from "../../frontend/ast";
 import { fatalFmt } from "../../utils";
 import Environment from "../environment";
@@ -20,11 +21,13 @@ import {
   type NativeFnValue,
   type NumberValue,
   type ObjectValue,
+  type ReturnValue,
   type RuntimeValue,
   type StringValue,
   MK_BOOL,
   MK_NULL,
   MK_NUMBER,
+  MK_RETURN,
 } from "../values";
 
 export function evaluate_numeric_binary_expression(
@@ -132,6 +135,38 @@ export function evaluate_member_expression(
     );
   }
 
+  const obj = object as ObjectValue;
+
+  if (expr.computed) {
+    const propertyValue = evaluate(expr.property, env);
+
+    let propertyKey: string;
+
+    if (propertyValue.type === "string") {
+      propertyKey = (propertyValue as StringValue).value;
+    } else if (propertyValue.type === "number") {
+      propertyKey = String((propertyValue as NumberValue).value);
+    } else {
+      fatalFmt(
+        expr.property.start,
+        "Property accessor must be a string or number, got: %s",
+        propertyValue.type
+      );
+    }
+
+    const value = obj.properties.get(propertyKey);
+
+    if (!value) {
+      fatalFmt(
+        expr.start,
+        "Property '%s' does not exist on object",
+        propertyKey
+      );
+    }
+
+    return value;
+  }
+
   if (expr.property.kind !== "Identifier") {
     fatalFmt(
       expr.start,
@@ -190,6 +225,9 @@ export function evaluate_call_expression(
     let result: RuntimeValue = MK_NULL();
     for (const statement of func.body) {
       result = evaluate(statement, scope);
+      if (result.type === "return") {
+        return (result as ReturnValue).value ?? MK_NULL();
+      }
     }
 
     return result;
@@ -354,7 +392,7 @@ export function evaluate_logical_expression(
 }
 
 // Helper function to determine truthiness
-function is_truthy(value: RuntimeValue): boolean {
+export function is_truthy(value: RuntimeValue): boolean {
   switch (value.type) {
     case "null":
       return false;
@@ -368,46 +406,6 @@ function is_truthy(value: RuntimeValue): boolean {
       return true; // Objects, functions are truthy
   }
 }
-
-export function evaluate_conditional_declaration(
-  expr: ConditionalDeclaration,
-  env: Environment
-): RuntimeValue {
-  const conditionValue = evaluate(expr.condition, env);
-
-  // Use truthiness to determine which branch to take
-  if (is_truthy(conditionValue)) {
-    // Execute 'if' body
-    let result: RuntimeValue = MK_NULL();
-    for (const statement of expr.body) {
-      result = evaluate(statement, env);
-    }
-    return result;
-  }
-
-  // No else/else-if, return null
-  if (!expr.alternate) {
-    return MK_NULL();
-  }
-
-  // Handle else-if (recursive)
-  if (!Array.isArray(expr.alternate)) {
-    return evaluate_conditional_declaration(
-      expr.alternate as ConditionalDeclaration,
-      env
-    );
-  }
-
-  // Handle else block
-  let result: RuntimeValue = MK_NULL();
-  for (const statement of expr.alternate) {
-    result = evaluate(statement, env);
-  }
-  return result;
-}
-
-// In expressions.ts
-import type { UnaryExpression } from "../../frontend/ast";
 
 export function evaluate_unary_expression(
   expr: UnaryExpression,

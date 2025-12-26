@@ -21,6 +21,10 @@ import type {
   MemberExpression,
   LogicalExpression,
   UnaryExpression,
+  WhileDeclaration,
+  ContinueStatement,
+  BreakStatement,
+  ReturnStatement,
 } from "../frontend/ast";
 import type Environment from "./environment";
 import {
@@ -29,16 +33,20 @@ import {
   evaluate_assignment_expression,
   evaluate_object_expression,
   evaluate_call_expression,
-  evaluate_conditional_declaration,
   evaluate_comparison_expression,
   evaluate_member_expression,
   evaluate_logical_expression,
   evaluate_unary_expression,
 } from "./eval/expressions";
 import {
+  evaluate_break_statement,
+  evaluate_conditional_declaration,
+  evaluate_continue_statement,
   evaluate_function_declaration,
   evaluate_program,
+  evaluate_return_statement,
   evaluate_variable_declaration,
+  evaluate_while_declaration,
 } from "./eval/statements";
 import { fatalFmt } from "../utils";
 
@@ -106,6 +114,18 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
 
     case "UnaryExpr":
       return evaluate_unary_expression(astNode as UnaryExpression, env);
+
+    case "WhileDeclaration":
+      return evaluate_while_declaration(astNode as WhileDeclaration, env);
+
+    case "Break":
+      return evaluate_break_statement(astNode as BreakStatement, env);
+
+    case "Continue":
+      return evaluate_continue_statement(astNode as ContinueStatement, env);
+
+    case "Return":
+      return evaluate_return_statement(astNode as ReturnStatement, env);
 
     default: {
       fatalFmt(

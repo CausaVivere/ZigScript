@@ -6,6 +6,8 @@ export type NodeType =
   | "VariableDeclaration"
   | "FunctionDeclaration"
   | "ConditionalDeclaration"
+  | "ForDeclaration"
+  | "WhileDeclaration"
   | "Break"
   | "Continue"
   | "Return"
@@ -68,6 +70,7 @@ export interface ConditionalDeclaration extends Statement {
 
 export interface BreakStatement extends Statement {
   kind: "Break";
+  value: Expression;
 }
 
 export interface ContinueStatement extends Statement {
@@ -77,6 +80,18 @@ export interface ContinueStatement extends Statement {
 export interface ReturnStatement extends Statement {
   kind: "Return";
   value: Expression;
+}
+
+export interface WhileDeclaration extends Statement {
+  kind: "WhileDeclaration";
+  condition: Expression;
+  body: Statement[];
+  continueExpr?: Expression;
+}
+
+// add arrays first
+export interface ForDeclaration extends Statement {
+  kind: "ForDeclaration";
 }
 
 /**  Expressions will result in a value at runtime unlike Statements */

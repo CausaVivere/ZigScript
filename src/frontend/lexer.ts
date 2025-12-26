@@ -13,6 +13,8 @@ export enum TokenType {
   Return,
   If,
   Else,
+  For,
+  While,
   Continue,
   Break,
 
@@ -44,6 +46,8 @@ const KEYWORDS: Record<string, TokenType> = {
   return: TokenType.Return,
   if: TokenType.If,
   else: TokenType.Else,
+  for: TokenType.For,
+  while: TokenType.While,
   continue: TokenType.Continue,
   break: TokenType.Break,
 };

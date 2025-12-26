@@ -9,7 +9,10 @@ export type ValueType =
   | "object"
   | "native-fn"
   | "function"
-  | "conditional";
+  | "conditional"
+  | "break"
+  | "continue"
+  | "return";
 
 export interface RuntimeValue {
   type: ValueType;
@@ -58,6 +61,20 @@ export interface FunctionValue extends RuntimeValue {
   body: Statement[];
 }
 
+export interface BreakValue extends RuntimeValue {
+  type: "break";
+  value: RuntimeValue | null;
+}
+
+export interface ContinueValue extends RuntimeValue {
+  type: "continue";
+}
+
+export interface ReturnValue extends RuntimeValue {
+  type: "return";
+  value: RuntimeValue | null;
+}
+
 export function MK_NATIVE_FN(call: FunctionCall) {
   return { type: "native-fn", call } as NativeFnValue;
 }
@@ -88,4 +105,24 @@ export function MK_STRING(s: string = ""): StringValue {
     type: "string",
     value: s,
   } as StringValue;
+}
+
+export function MK_BREAK(value?: RuntimeValue): BreakValue {
+  return {
+    type: "break",
+    value: value ?? null,
+  } as BreakValue;
+}
+
+export function MK_CONTINUE(): ContinueValue {
+  return {
+    type: "continue",
+  } as ContinueValue;
+}
+
+export function MK_RETURN(value?: RuntimeValue): ReturnValue {
+  return {
+    type: "return",
+    value: value ?? null,
+  } as ReturnValue;
 }
