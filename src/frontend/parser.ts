@@ -19,6 +19,7 @@ import {
   type UnaryExpression,
   type WhileDeclaration,
   type BreakStatement,
+  type ArrayLiteral,
 } from "./ast.ts";
 import { tokenize, type Token, TokenType } from "./lexer";
 
@@ -495,6 +496,7 @@ export default class Parser {
       // Allows shorthand key: pair -> { key, }
       if (this.at().type === TokenType.Comma) {
         this.eat(); // advance past comma
+
         properties.push({
           key,
           kind: "Property",
@@ -716,6 +718,55 @@ export default class Parser {
     return object;
   }
 
+  private parse_array_literal(): Expression {
+    const tok = this.eat(); // skip bracket
+
+    if (this.at().type === TokenType.CloseBracket) {
+      this.eat();
+      return {
+        kind: "ArrayLiteral",
+        items: [],
+        start: tok.start,
+        end: tok.end,
+      } as ArrayLiteral;
+    }
+
+    const items: Expression[] = [];
+    while (
+      this.at().type !== TokenType.EOF ||
+      this.at().type !== TokenType.CloseBracket
+    ) {
+      items.push(this.parse_expression());
+
+      if (this.at().type === TokenType.CloseBracket) break;
+      if (this.at().type === TokenType.Comma) {
+        this.eat();
+
+        if (this.at().type === TokenType.CloseBracket) {
+          break; // Exit loop, allow trailing comma
+        }
+      } else if (this.at().type !== TokenType.CloseBracket) {
+        fatalFmt(
+          this.at().start,
+          "Expected ',' or ']' in array literal, got '%s'",
+          this.at().value
+        );
+      }
+    }
+
+    this.expect(
+      TokenType.CloseBracket,
+      "Close bracket expected for closing array expression."
+    );
+
+    return {
+      kind: "ArrayLiteral",
+      items,
+      start: tok.start,
+      end: tok.end,
+    } as ArrayLiteral;
+  }
+
   // Order of Precedence
   // AssignmentExpr
   // ObjectExpr
@@ -768,6 +819,9 @@ export default class Parser {
           "Unexpected token found inside parenthesised expression. Expected closing parenthesis."
         ); // closing parenthesis
         return value;
+      }
+      case TokenType.OpenBracket: {
+        return this.parse_array_literal();
       }
       default: {
         const tok = this.at();

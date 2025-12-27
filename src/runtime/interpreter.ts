@@ -3,6 +3,7 @@ import {
   type NumberValue,
   MK_NULL,
   type StringValue,
+  type ArrayValue,
 } from "./values";
 import type {
   BinaryExpression,
@@ -25,6 +26,7 @@ import type {
   ContinueStatement,
   BreakStatement,
   ReturnStatement,
+  ArrayLiteral,
 } from "../frontend/ast";
 import type Environment from "./environment";
 import {
@@ -63,6 +65,14 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
         type: "string",
         value: strVal,
       } as StringValue;
+    }
+    case "ArrayLiteral": {
+      return {
+        type: "array",
+        value: (astNode as ArrayLiteral).items.map((item) =>
+          evaluate(item, env)
+        ),
+      } as ArrayValue;
     }
     case "Identifier": {
       return evaluate_identifier(astNode as Identifier, env);

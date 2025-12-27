@@ -26,7 +26,8 @@ export type NodeType =
   | "StringLiteral"
   | "Identifier"
   | "Property"
-  | "ObjectLiteral";
+  | "ObjectLiteral"
+  | "ArrayLiteral";
 
 /**
  * Statements do not result in a value at runtime.
@@ -156,6 +157,11 @@ export interface NumericLiteral extends Expression {
 export interface StringLiteral extends Expression {
   kind: "StringLiteral";
   value: string;
+}
+
+export interface ArrayLiteral extends Expression {
+  kind: "ArrayLiteral";
+  items: Expression[];
 }
 
 export interface AssignmentExpression extends Expression {

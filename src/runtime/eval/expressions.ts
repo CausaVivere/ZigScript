@@ -16,6 +16,7 @@ import { fatalFmt } from "../../utils";
 import Environment from "../environment";
 import { evaluate } from "../interpreter";
 import {
+  type ArrayValue,
   type BooleanValue,
   type FunctionValue,
   type NativeFnValue,
@@ -28,6 +29,7 @@ import {
   MK_NULL,
   MK_NUMBER,
   MK_RETURN,
+  MK_STRING,
 } from "../values";
 
 export function evaluate_numeric_binary_expression(
@@ -67,6 +69,36 @@ export function evaluate_binary_expression(
   const leftHandSide = evaluate(binop.left, env);
   const rightHandSide = evaluate(binop.right, env);
 
+  // Reject binary operations on arrays
+  if (leftHandSide.type === "array" || rightHandSide.type === "array") {
+    fatalFmt(
+      binop.start,
+      "Binary operator '%s' cannot be used with arrays. Use array methods like concat(), map(), or iterate manually.",
+      binop.operator
+    );
+  }
+
+  // Handle string concatenation
+  if (leftHandSide.type === "string" || rightHandSide.type === "string") {
+    if (binop.operator === "+") {
+      const leftStr =
+        leftHandSide.type === "string"
+          ? (leftHandSide as StringValue).value
+          : String((leftHandSide as NumberValue).value);
+      const rightStr =
+        rightHandSide.type === "string"
+          ? (rightHandSide as StringValue).value
+          : String((rightHandSide as NumberValue).value);
+      return MK_STRING(leftStr + rightStr);
+    }
+    fatalFmt(
+      binop.start,
+      "Cannot use operator '%s' with strings",
+      binop.operator
+    );
+  }
+
+  // Numeric Operations
   if (leftHandSide.type === "number" || rightHandSide.type === "number") {
     return evaluate_numeric_binary_expression(
       leftHandSide as NumberValue,
@@ -127,12 +159,44 @@ export function evaluate_member_expression(
   env: Environment
 ): RuntimeValue {
   const object = evaluate(expr.object, env);
-  if (object.type !== "object") {
+  if (object.type !== "object" && object.type !== "array") {
     fatalFmt(
       expr.start,
-      "Cannot access property '%s' of non-object",
+      "Cannot access property '%s' of non-object or non-array.",
       expr.property
     );
+  }
+
+  if (object.type === "array") {
+    if (!expr.computed)
+      fatalFmt(expr.start, "Invalid syntax for accessing arrays.");
+
+    const array = object as ArrayValue;
+    const propertyValue = evaluate(expr.property, env);
+    let propertyKey: number;
+
+    if (propertyValue.type === "string") {
+      propertyKey = parseInt((propertyValue as StringValue).value);
+    } else if (propertyValue.type === "number") {
+      propertyKey = (propertyValue as NumberValue).value;
+    } else {
+      fatalFmt(
+        expr.property.start,
+        "Property accessor must be a string or number, got: %s",
+        propertyValue.type
+      );
+    }
+
+    const item = array.value[propertyKey];
+
+    if (!item)
+      fatalFmt(
+        expr.start,
+        "Could not resolve any item in array for property %s",
+        propertyKey
+      );
+
+    return item;
   }
 
   const obj = object as ObjectValue;

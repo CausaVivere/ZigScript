@@ -68,3 +68,27 @@ function test_while_loop(i){
 print(test_while_loop(1));
 
 print(obj["foo"]);
+
+// Basic arrays
+const nums = [1, 2, 3];
+const strs = ["a", "b", "c"];
+const empty = [];
+
+function num(n){return n;}
+
+// Expressions as elements
+const computed = [1 + 1, num(5), obj.x * 2];
+
+// Nested arrays
+const matrix = [[1, 2], [3, 4]];
+
+// Array indexing (already works with your member expression)
+const first = nums[0];
+
+// Array in object
+const arrObj = { data: [1, 2, 3] };
+
+// Trailing comma
+const arr = [1, 2, 3,];
+
+print("Hello " + "World!");

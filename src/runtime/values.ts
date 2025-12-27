@@ -7,6 +7,7 @@ export type ValueType =
   | "boolean"
   | "string"
   | "object"
+  | "array"
   | "native-fn"
   | "function"
   | "conditional"
@@ -36,6 +37,11 @@ export interface BooleanValue extends RuntimeValue {
 export interface StringValue extends RuntimeValue {
   type: "string";
   value: string;
+}
+
+export interface ArrayValue extends RuntimeValue {
+  type: "array";
+  value: RuntimeValue[];
 }
 
 export interface ObjectValue extends RuntimeValue {
