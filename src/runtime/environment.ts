@@ -19,7 +19,15 @@ export function createGlobalEnvironment() {
   env.declareVar(
     "print",
     MK_NATIVE_FN((args, scope) => {
-      console.log(...args);
+      console.log(
+        ...args.map((arg: any) =>
+          arg.value
+            ? Array.isArray(arg.value)
+              ? arg.value.map((item: any) => item.value)
+              : arg.value
+            : arg
+        )
+      );
       return MK_NULL();
     }),
     true

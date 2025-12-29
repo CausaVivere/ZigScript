@@ -619,29 +619,57 @@ export default class Parser {
     return this.parse_call_member_expression();
   }
 
-  // foo.x()()
   private parse_call_member_expression(): Expression {
-    const member = this.parse_member_expression();
+    let object = this.parse_primary_expression();
 
-    if (this.at().type === TokenType.OpenParen) {
-      return this.parse_call_expression(member);
+    while (true) {
+      if (this.at().type === TokenType.Dot) {
+        // Dot member access: obj.prop
+        this.eat();
+        const property = this.parse_primary_expression();
+
+        if (property.kind !== "Identifier") {
+          fatalFmt(
+            this.at().start,
+            "Cannot use dot operator without right hand side being an identifier"
+          );
+        }
+
+        object = {
+          kind: "MemberExpr",
+          object,
+          property,
+          computed: false,
+        } as MemberExpression;
+      } else if (this.at().type === TokenType.OpenBracket) {
+        // Bracket member access: obj[expr]
+        this.eat();
+        const property = this.parse_expression();
+
+        this.expect(
+          TokenType.CloseBracket,
+          "Missing closing bracket for computed value."
+        );
+
+        object = {
+          kind: "MemberExpr",
+          object,
+          property,
+          computed: true,
+        } as MemberExpression;
+      } else if (this.at().type === TokenType.OpenParen) {
+        // Function call: func() or obj.method()
+        object = {
+          kind: "CallExpr",
+          caller: object,
+          args: this.parse_args(),
+        } as CallExpression;
+      } else {
+        break;
+      }
     }
 
-    return member;
-  }
-
-  private parse_call_expression(caller: Expression): Expression {
-    let call_expr: Expression = {
-      kind: "CallExpr",
-      caller,
-      args: this.parse_args(),
-    } as CallExpression;
-
-    if (this.at().type === TokenType.OpenParen) {
-      call_expr = this.parse_call_expression(call_expr);
-    }
-
-    return call_expr;
+    return object;
   }
 
   private parse_args(): Expression[] {

@@ -90,5 +90,7 @@ const arrObj = { data: [1, 2, 3] };
 
 // Trailing comma
 const arr = [1, 2, 3,];
-
-print("Hello " + "World!");
+print("First Array", arr, arr.length);
+arr.push(4,5,6);
+print("After push array", arr, arr.length);
+print([3,4,5].push(6,7).length);

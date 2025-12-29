@@ -18,6 +18,7 @@ import { evaluate } from "../interpreter";
 import {
   type ArrayValue,
   type BooleanValue,
+  type FunctionCall,
   type FunctionValue,
   type NativeFnValue,
   type NumberValue,
@@ -31,6 +32,7 @@ import {
   MK_RETURN,
   MK_STRING,
 } from "../values";
+import { arrayMethods, functions, push } from "./array_methods";
 
 export function evaluate_numeric_binary_expression(
   lhs: NumberValue, // Left Hand Side
@@ -168,35 +170,63 @@ export function evaluate_member_expression(
   }
 
   if (object.type === "array") {
-    if (!expr.computed)
-      fatalFmt(expr.start, "Invalid syntax for accessing arrays.");
+    if (expr.computed) {
+      const array = object as ArrayValue;
+      const propertyValue = evaluate(expr.property, env);
+      let propertyKey: number;
 
-    const array = object as ArrayValue;
-    const propertyValue = evaluate(expr.property, env);
-    let propertyKey: number;
+      if (propertyValue.type === "string") {
+        propertyKey = parseInt((propertyValue as StringValue).value);
+      } else if (propertyValue.type === "number") {
+        propertyKey = (propertyValue as NumberValue).value;
+      } else {
+        fatalFmt(
+          expr.property.start,
+          "Property accessor must be a string or number, got: %s",
+          propertyValue.type
+        );
+      }
 
-    if (propertyValue.type === "string") {
-      propertyKey = parseInt((propertyValue as StringValue).value);
-    } else if (propertyValue.type === "number") {
-      propertyKey = (propertyValue as NumberValue).value;
-    } else {
-      fatalFmt(
-        expr.property.start,
-        "Property accessor must be a string or number, got: %s",
-        propertyValue.type
-      );
+      const item = array.value[propertyKey];
+
+      if (!item)
+        fatalFmt(
+          expr.start,
+          "Could not resolve any item in array for property %s",
+          propertyKey
+        );
+
+      return item;
     }
 
-    const item = array.value[propertyKey];
+    const array = object as ArrayValue;
 
-    if (!item)
-      fatalFmt(
-        expr.start,
-        "Could not resolve any item in array for property %s",
-        propertyKey
-      );
+    // Handle dot notation: arr.push, arr.length, etc.
+    if (expr.property.kind === "Identifier") {
+      const methodName = (expr.property as Identifier).symbol;
 
-    return item;
+      // Handle length property
+      if (methodName === "length") {
+        return MK_NUMBER(array.value.length);
+      }
+
+      // Handle array methods - return a native function bound to this array
+      if (arrayMethods.includes(methodName)) {
+        return {
+          type: "native-fn",
+          call: (args: RuntimeValue[], _env: Environment) => {
+            return functions[methodName as keyof typeof functions](
+              array,
+              ...args
+            );
+          },
+        } as NativeFnValue;
+      }
+
+      fatalFmt(expr.start, "Array has no property or method '%s'", methodName);
+    }
+
+    fatalFmt(expr.start, "Invalid array access");
   }
 
   const obj = object as ObjectValue;
