@@ -70,9 +70,12 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
       return {
         type: "array",
         value: (astNode as ArrayLiteral).items.map((item) =>
-          evaluate(item, env)
+          evaluate(item, env),
         ),
       } as ArrayValue;
+    }
+    case "NullLiteral": {
+      return MK_NULL();
     }
     case "Identifier": {
       return evaluate_identifier(astNode as Identifier, env);
@@ -86,7 +89,7 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
     case "AssignmentExpr":
       return evaluate_assignment_expression(
         astNode as AssignmentExpression,
-        env
+        env,
       );
 
     case "MemberExpr":
@@ -108,14 +111,14 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
     case "ConditionalDeclaration": {
       return evaluate_conditional_declaration(
         astNode as ConditionalDeclaration,
-        env
+        env,
       );
     }
 
     case "ComparisonExpr": {
       return evaluate_comparison_expression(
         astNode as ComparisonExpression,
-        env
+        env,
       );
     }
 
@@ -141,7 +144,7 @@ export function evaluate(astNode: Statement, env: Environment): RuntimeValue {
       fatalFmt(
         astNode.start,
         "This AST Node has not yet been implemented for interpretation %s",
-        JSON.stringify(astNode, null, 2)
+        JSON.stringify(astNode, null, 2),
       );
     }
   }

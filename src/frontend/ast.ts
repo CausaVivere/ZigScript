@@ -27,7 +27,56 @@ export type NodeType =
   | "Identifier"
   | "Property"
   | "ObjectLiteral"
-  | "ArrayLiteral";
+  | "ArrayLiteral"
+  | "TypeAnnotation"
+  | "NullLiteral";
+
+export type TYPE =
+  | "number"
+  | "i8"
+  | "i16"
+  | "i32"
+  | "i64"
+  | "i128"
+  | "u8"
+  | "u16"
+  | "u32"
+  | "u64"
+  | "u128"
+  | "f16"
+  | "f32"
+  | "f64"
+  | "f80"
+  | "f128"
+  | "string"
+  | "object"
+  | "array"
+  | "boolean"
+  | "function";
+
+export const TYPE_STRINGS: string[] = [
+  "number",
+  "i8",
+  "i16",
+  "i32",
+  "i64",
+  "i128",
+  "u8",
+  "u16",
+  "u32",
+  "u64",
+  "u128",
+  "f16",
+  "f32",
+  "f64",
+  "f80",
+  "f128",
+  "string",
+  "boolean",
+  "object",
+  "array",
+  "function",
+];
 
 /**
  * Statements do not result in a value at runtime.
@@ -47,19 +96,34 @@ export interface Program extends Statement {
   body: Statement[];
 }
 
+// var x: number = 5; -> TypeAnnotation
+export interface TypeAnnotation extends Statement {
+  kind: "TypeAnnotation";
+  type: TYPE;
+  isArray: boolean;
+  isOptional: boolean;
+}
+
 export interface VariableDeclaration extends Statement {
   kind: "VariableDeclaration";
   constant: boolean;
   identifier: string;
+  type?: TypeAnnotation;
   value?: Expression;
 }
 
 export interface FunctionDeclaration extends Statement {
   kind: "FunctionDeclaration";
-  parameters: string[]; // to be changed from string to support types and default values
+  parameters: Parameter[];
   name: string;
   body: Statement[];
   arrow?: boolean;
+  returnType?: TypeAnnotation;
+}
+
+export interface Parameter {
+  name: string;
+  type: TypeAnnotation;
 }
 
 export interface ConditionalDeclaration extends Statement {
@@ -71,7 +135,7 @@ export interface ConditionalDeclaration extends Statement {
 
 export interface BreakStatement extends Statement {
   kind: "Break";
-  value: Expression;
+  value?: Expression;
 }
 
 export interface ContinueStatement extends Statement {
@@ -80,7 +144,7 @@ export interface ContinueStatement extends Statement {
 
 export interface ReturnStatement extends Statement {
   kind: "Return";
-  value: Expression;
+  value?: Expression;
 }
 
 export interface WhileDeclaration extends Statement {
@@ -144,6 +208,7 @@ export interface MemberExpression extends Expression {
 export interface Identifier extends Expression {
   kind: "Identifier";
   symbol: string;
+  typeAnnotation?: TypeAnnotation;
 }
 
 /**
@@ -162,6 +227,10 @@ export interface StringLiteral extends Expression {
 export interface ArrayLiteral extends Expression {
   kind: "ArrayLiteral";
   items: Expression[];
+}
+
+export interface NullLiteral extends Expression {
+  kind: "NullLiteral";
 }
 
 export interface AssignmentExpression extends Expression {

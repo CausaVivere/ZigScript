@@ -5,6 +5,7 @@ export enum TokenType {
   Number,
   Identifier,
   String,
+  Null,
 
   // Keywords
   Let,
@@ -26,9 +27,9 @@ export enum TokenType {
   Bang, // !
   QuestionMark, // ?
   Semicolon,
-  Comma,
+  Comma, // ,
   Dot,
-  Colon,
+  Colon, // :
   OpenParen, // (
   CloseParen, // )
   OpenBrace, // {
@@ -50,6 +51,7 @@ const KEYWORDS: Record<string, TokenType> = {
   while: TokenType.While,
   continue: TokenType.Continue,
   break: TokenType.Break,
+  null: TokenType.Null,
 };
 
 export interface Token {
@@ -63,7 +65,7 @@ function token(
   value: string | undefined,
   type: TokenType,
   start: number,
-  end: number
+  end: number,
 ): Token {
   if (!value) {
     throw new Error("Token Value is undefined " + value + " " + type);
@@ -152,7 +154,7 @@ export function tokenize(sourceCode: string): Token[] {
         src.shift();
         position++;
         tokens.push(
-          token(char, TokenType.BinaryOperator, tokenStart, position)
+          token(char, TokenType.BinaryOperator, tokenStart, position),
         );
         break;
       case "<": {
@@ -163,11 +165,11 @@ export function tokenize(sourceCode: string): Token[] {
           const op = char + src.shift();
           position++;
           tokens.push(
-            token(op, TokenType.ComparisonOperator, tokenStart, position)
+            token(op, TokenType.ComparisonOperator, tokenStart, position),
           );
         } else {
           tokens.push(
-            token(char, TokenType.ComparisonOperator, tokenStart, position)
+            token(char, TokenType.ComparisonOperator, tokenStart, position),
           );
         }
         break;
@@ -180,11 +182,11 @@ export function tokenize(sourceCode: string): Token[] {
           const op = char + src.shift();
           position++;
           tokens.push(
-            token(op, TokenType.ComparisonOperator, tokenStart, position)
+            token(op, TokenType.ComparisonOperator, tokenStart, position),
           );
         } else {
           tokens.push(
-            token(char, TokenType.ComparisonOperator, tokenStart, position)
+            token(char, TokenType.ComparisonOperator, tokenStart, position),
           );
         }
         break;
@@ -198,7 +200,7 @@ export function tokenize(sourceCode: string): Token[] {
           src.shift();
           position++;
           tokens.push(
-            token(op, TokenType.ComparisonOperator, tokenStart, position)
+            token(op, TokenType.ComparisonOperator, tokenStart, position),
           );
         } else {
           tokens.push(token("!", TokenType.Bang, tokenStart, position));
@@ -214,7 +216,7 @@ export function tokenize(sourceCode: string): Token[] {
           const op = char + src.shift();
           position++;
           tokens.push(
-            token(op, TokenType.ComparisonOperator, tokenStart, position)
+            token(op, TokenType.ComparisonOperator, tokenStart, position),
           );
         } else {
           tokens.push(token("=", TokenType.Equals, tokenStart, position));
@@ -229,13 +231,13 @@ export function tokenize(sourceCode: string): Token[] {
           src.shift();
           position++;
           tokens.push(
-            token(op, TokenType.LogicalOperator, tokenStart, position)
+            token(op, TokenType.LogicalOperator, tokenStart, position),
           );
         } else {
           fatalFmt(
             tokenStart,
             "Unrecognized character '&' at position %d",
-            position
+            position,
           );
         }
         break;
@@ -248,13 +250,13 @@ export function tokenize(sourceCode: string): Token[] {
           src.shift();
           position++;
           tokens.push(
-            token(op, TokenType.LogicalOperator, tokenStart, position)
+            token(op, TokenType.LogicalOperator, tokenStart, position),
           );
         } else {
           fatalFmt(
             tokenStart,
             "Unrecognized character '|' at position %d",
-            position
+            position,
           );
         }
         break;
@@ -267,7 +269,7 @@ export function tokenize(sourceCode: string): Token[] {
           src.shift();
           position++;
           tokens.push(
-            token(op, TokenType.LogicalOperator, tokenStart, position)
+            token(op, TokenType.LogicalOperator, tokenStart, position),
           );
           break;
         }
@@ -316,7 +318,7 @@ export function tokenize(sourceCode: string): Token[] {
           } else {
             // It's an identifier
             tokens.push(
-              token(ident, TokenType.Identifier, tokenStart, position)
+              token(ident, TokenType.Identifier, tokenStart, position),
             );
           }
         } else if (char === '"' || char === "'") {
@@ -340,7 +342,7 @@ export function tokenize(sourceCode: string): Token[] {
             tokenStart,
             "Unrecognized character '%s' at position %d",
             char,
-            position
+            position,
           );
         }
         break;

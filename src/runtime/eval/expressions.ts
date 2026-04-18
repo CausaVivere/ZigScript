@@ -37,7 +37,7 @@ import { arrayMethods, functions, push } from "./array_methods";
 export function evaluate_numeric_binary_expression(
   lhs: NumberValue, // Left Hand Side
   rhs: NumberValue, // Right Hand Side
-  operator: string
+  operator: string,
 ): NumberValue {
   let result = 0;
   switch (operator) {
@@ -66,7 +66,7 @@ export function evaluate_numeric_binary_expression(
 
 export function evaluate_binary_expression(
   binop: BinaryExpression,
-  env: Environment
+  env: Environment,
 ): RuntimeValue {
   const leftHandSide = evaluate(binop.left, env);
   const rightHandSide = evaluate(binop.right, env);
@@ -76,7 +76,7 @@ export function evaluate_binary_expression(
     fatalFmt(
       binop.start,
       "Binary operator '%s' cannot be used with arrays. Use array methods like concat(), map(), or iterate manually.",
-      binop.operator
+      binop.operator,
     );
   }
 
@@ -96,7 +96,7 @@ export function evaluate_binary_expression(
     fatalFmt(
       binop.start,
       "Cannot use operator '%s' with strings",
-      binop.operator
+      binop.operator,
     );
   }
 
@@ -105,7 +105,7 @@ export function evaluate_binary_expression(
     return evaluate_numeric_binary_expression(
       leftHandSide as NumberValue,
       rightHandSide as NumberValue,
-      binop.operator
+      binop.operator,
     );
   }
 
@@ -114,20 +114,20 @@ export function evaluate_binary_expression(
 
 export function evaluate_identifier(
   ident: Identifier,
-  env: Environment
+  env: Environment,
 ): RuntimeValue {
   return env.lookupVar(ident.symbol, ident);
 }
 
 export function evaluate_assignment_expression(
   node: AssignmentExpression,
-  env: Environment
+  env: Environment,
 ): RuntimeValue {
   if (node.assignee.kind !== "Identifier") {
     fatalFmt(
       node.start,
       "Invalid Left Hand Side in Assignment Expression: %s",
-      JSON.stringify(node.assignee)
+      JSON.stringify(node.assignee),
     );
   }
   const varName = (node.assignee as Identifier).symbol;
@@ -136,7 +136,7 @@ export function evaluate_assignment_expression(
 
 export function evaluate_object_expression(
   obj: ObjectLiteral,
-  env: Environment
+  env: Environment,
 ): RuntimeValue {
   const object = {
     type: "object",
@@ -158,14 +158,14 @@ export function evaluate_object_expression(
 
 export function evaluate_member_expression(
   expr: MemberExpression,
-  env: Environment
+  env: Environment,
 ): RuntimeValue {
   const object = evaluate(expr.object, env);
   if (object.type !== "object" && object.type !== "array") {
     fatalFmt(
       expr.start,
       "Cannot access property '%s' of non-object or non-array.",
-      expr.property
+      expr.property,
     );
   }
 
@@ -183,7 +183,7 @@ export function evaluate_member_expression(
         fatalFmt(
           expr.property.start,
           "Property accessor must be a string or number, got: %s",
-          propertyValue.type
+          propertyValue.type,
         );
       }
 
@@ -193,7 +193,7 @@ export function evaluate_member_expression(
         fatalFmt(
           expr.start,
           "Could not resolve any item in array for property %s",
-          propertyKey
+          propertyKey,
         );
 
       return item;
@@ -217,7 +217,7 @@ export function evaluate_member_expression(
           call: (args: RuntimeValue[], _env: Environment) => {
             return functions[methodName as keyof typeof functions](
               array,
-              ...args
+              ...args,
             );
           },
         } as NativeFnValue;
@@ -244,7 +244,7 @@ export function evaluate_member_expression(
       fatalFmt(
         expr.property.start,
         "Property accessor must be a string or number, got: %s",
-        propertyValue.type
+        propertyValue.type,
       );
     }
 
@@ -254,7 +254,7 @@ export function evaluate_member_expression(
       fatalFmt(
         expr.start,
         "Property '%s' does not exist on object",
-        propertyKey
+        propertyKey,
       );
     }
 
@@ -265,18 +265,18 @@ export function evaluate_member_expression(
     fatalFmt(
       expr.start,
       "Cannot access property '%s' of non-identifier",
-      expr.property
+      expr.property,
     );
   }
 
   const prop = (object as ObjectValue).properties.get(
-    (expr.property as Identifier).symbol
+    (expr.property as Identifier).symbol,
   );
   if (!prop) {
     fatalFmt(
       expr.start,
       "Property '%s' does not exist on object",
-      (expr.property as Identifier).symbol
+      (expr.property as Identifier).symbol,
     );
   }
 
@@ -285,7 +285,7 @@ export function evaluate_member_expression(
 
 export function evaluate_call_expression(
   expr: CallExpression,
-  env: Environment
+  env: Environment,
 ): RuntimeValue {
   const args = expr.args.map((arg) => evaluate(arg, env));
   const fn = evaluate(expr.caller, env);
@@ -306,13 +306,13 @@ export function evaluate_call_expression(
         expr.start,
         "Function expects %d arguments but received %d",
         func.parameters.length,
-        args.length
+        args.length,
       );
     }
 
     // Create the variables for the parameters list
     for (let i = 0; i < func.parameters.length; i++) {
-      const varname = func.parameters[i];
+      const varname = func.parameters[i]?.name;
       scope.declareVar(varname!, args[i]!, false, expr);
     }
 
@@ -330,13 +330,13 @@ export function evaluate_call_expression(
   fatalFmt(
     expr.start,
     "Can not call value that is not a function: ",
-    JSON.stringify(fn)
+    JSON.stringify(fn),
   );
 }
 
 export function evaluate_comparison_expression(
   expr: ComparisonExpression,
-  env: Environment
+  env: Environment,
 ): RuntimeValue {
   const left = evaluate(expr.left, env);
   const right = evaluate(expr.right, env);
@@ -346,7 +346,7 @@ export function evaluate_comparison_expression(
       expr.start,
       "Cannot compare different types: %s and %s",
       left.type,
-      right.type
+      right.type,
     );
   }
 
@@ -408,7 +408,7 @@ export function evaluate_comparison_expression(
         fatalFmt(
           expr.start,
           "Unsupported string comparison operator: %s",
-          expr.operator
+          expr.operator,
         );
     }
 
@@ -433,14 +433,14 @@ export function evaluate_comparison_expression(
         fatalFmt(
           expr.start,
           "Relational operators (%s) are not allowed on boolean values. Use == or != instead.",
-          expr.operator
+          expr.operator,
         );
       default:
         fatalFmt(
           expr.start,
           "Unsupported boolean comparison operator: %s for expression of kind %s",
           expr.operator,
-          expr.kind
+          expr.kind,
         );
     }
 
@@ -452,13 +452,13 @@ export function evaluate_comparison_expression(
     expr.start,
     "Cannot compare types: %s and %s",
     left.type,
-    right.type
+    right.type,
   );
 }
 
 export function evaluate_logical_expression(
   expr: LogicalExpression,
-  env: Environment
+  env: Environment,
 ): RuntimeValue {
   const left = evaluate(expr.left, env);
 
@@ -503,7 +503,7 @@ export function is_truthy(value: RuntimeValue): boolean {
 
 export function evaluate_unary_expression(
   expr: UnaryExpression,
-  env: Environment
+  env: Environment,
 ): RuntimeValue {
   const argument = evaluate(expr.argument, env);
 
@@ -518,7 +518,7 @@ export function evaluate_unary_expression(
         fatalFmt(
           expr.start,
           "Cannot negate non-numeric value: %s",
-          argument.type
+          argument.type,
         );
       }
       return MK_NUMBER(-(argument as NumberValue).value);
@@ -529,7 +529,7 @@ export function evaluate_unary_expression(
         fatalFmt(
           expr.start,
           "Cannot apply unary + to non-numeric value: %s",
-          argument.type
+          argument.type,
         );
       }
       return argument; // Just return as-is

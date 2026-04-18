@@ -25,12 +25,14 @@ export function createGlobalEnvironment() {
             ? Array.isArray(arg.value)
               ? arg.value.map((item: any) => item.value)
               : arg.value
-            : arg
-        )
+            : arg.value === null
+              ? "null"
+              : arg,
+        ),
       );
       return MK_NULL();
     }),
-    true
+    true,
   );
 
   const timeFunction = (args: RuntimeValue[], env: Environment) => {
@@ -57,13 +59,13 @@ export default class Environment {
     varName: string,
     value: RuntimeValue,
     constant: boolean,
-    astNode?: Statement
+    astNode?: Statement,
   ): RuntimeValue {
     if (this.variables.has(varName)) {
       fatalFmt(
         astNode?.start ?? 0,
         "Variable %s is already declared in this scope.",
-        varName
+        varName,
       );
     }
     this.variables.set(varName, value);
@@ -77,14 +79,14 @@ export default class Environment {
   public assignVar(
     varName: string,
     value: RuntimeValue,
-    astNode?: Statement
+    astNode?: Statement,
   ): RuntimeValue {
     const env = this.resolve(varName, astNode);
     if (env.constants.has(varName)) {
       fatalFmt(
         astNode?.start ?? 0,
         "Cannot assign to constant variable %s.",
-        varName
+        varName,
       );
     }
     env.variables.set(varName, value);
@@ -104,7 +106,7 @@ export default class Environment {
       fatalFmt(
         astNode?.start ?? 0,
         "Cannot resolve %s as it does not exist.",
-        varName
+        varName,
       );
     }
 

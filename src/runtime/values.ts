@@ -1,4 +1,4 @@
-import type { Statement } from "../frontend/ast";
+import type { Parameter, Statement } from "../frontend/ast";
 import type Environment from "./environment";
 
 export type ValueType =
@@ -51,7 +51,7 @@ export interface ObjectValue extends RuntimeValue {
 
 export type FunctionCall = (
   args: RuntimeValue[],
-  env: Environment
+  env: Environment,
 ) => RuntimeValue;
 
 export interface NativeFnValue extends RuntimeValue {
@@ -62,7 +62,7 @@ export interface NativeFnValue extends RuntimeValue {
 export interface FunctionValue extends RuntimeValue {
   type: "function";
   name: string;
-  parameters: string[];
+  parameters: Parameter[];
   declarationEnv: Environment;
   body: Statement[];
 }

@@ -1,3 +1,6 @@
+let whatever: number[] = 12;
+print(whatever);
+
 const foo = "bar";
 
 const obj = {
@@ -16,12 +19,12 @@ const timeNow = time();
 
 print(timeNow);
 
-function makeAdder(offset){
+function makeAdder(offset: number?){
 
-  function add (x,y) {
+  function add (x: number,y: number) {
     x + y + offset;
   }
-
+  
   add
 }
 
@@ -31,7 +34,7 @@ const adder = makeAdder(1);
 print(adder(10,5));
 
 function sub() {
-  function add (x,y) {
+  function add (x: number,y: number) {
     let result = x + y;
     print(result);
 
@@ -40,7 +43,6 @@ function sub() {
 
   let foo = 45;
 }
-
 
 print(-5 + 5);
 
@@ -55,7 +57,7 @@ if(!(obj.x == 100)) {
 
 if(obj.x == 100) {print("It's true");}
 
-function test_while_loop(i){
+function test_while_loop(i: number){
   while(i < 1000) : (i = i + 1) {
     if(i==2) continue;
     else if(i==5) break;
@@ -74,7 +76,7 @@ const nums = [1, 2, 3];
 const strs = ["a", "b", "c"];
 const empty = [];
 
-function num(n){return n;}
+function num(n: number){return n;}
 
 // Expressions as elements
 const computed = [1 + 1, num(5), obj.x * 2];
@@ -94,3 +96,4 @@ print("First Array", arr, arr.length);
 arr.push(4,5,6);
 print("After push array", arr, arr.length);
 print([3,4,5].push(6,7).length);
+

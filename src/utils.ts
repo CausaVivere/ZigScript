@@ -1,3 +1,4 @@
+import type { TYPE } from "./frontend/ast";
 import type { Token } from "./frontend/lexer";
 
 export function fatal(message: string): never {
