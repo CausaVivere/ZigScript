@@ -815,6 +815,60 @@ export default class Parser {
         isArray = true;
       }
 
+      if (typeToken.value === "array") {
+        const op = this.expect(
+          TokenType.ComparisonOperator,
+          "Expected item type for array annotation, e.g. array<string>",
+        );
+        if (op.value !== "<") {
+          fatalFmt(
+            op.start,
+            "Expected '<' after 'array' in type annotation, got '%s'",
+            op.value,
+          );
+        }
+
+        const itemTypeToken = this.expect(
+          TokenType.Identifier,
+          "Expected item type identifier in array type annotation.",
+        );
+
+        if (!this.validate_type(itemTypeToken.value)) {
+          fatalFmt(
+            itemTypeToken.start,
+            "Invalid type '%s' in array type annotation.",
+            itemTypeToken.value,
+          );
+        }
+
+        const closingOp = this.expect(
+          TokenType.ComparisonOperator,
+          "Expected '>' after item type in array annotation.",
+        );
+        if (closingOp.value !== ">") {
+          fatalFmt(
+            closingOp.start,
+            "Expected '>' after item type in array annotation, got '%s'",
+            closingOp.value,
+          );
+        }
+
+        const isOptional = this.at().type === TokenType.QuestionMark;
+
+        if (isOptional) {
+          this.eat(); // eat the question mark
+        }
+
+        return {
+          kind: "TypeAnnotation",
+          type: itemTypeToken.value,
+          isArray: true,
+          isOptional,
+          start: typeToken.start,
+          end: closingOp.end,
+        } as TypeAnnotation;
+      }
+
       let isOptional = false;
 
       if (this.at().type === TokenType.QuestionMark) {

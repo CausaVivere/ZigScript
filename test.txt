@@ -1,4 +1,4 @@
-let whatever: number[] = 12;
+let whatever: array<number> = 12;
 print(whatever);
 
 const foo = "bar";

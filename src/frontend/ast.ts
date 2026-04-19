@@ -52,7 +52,8 @@ export type TYPE =
   | "object"
   | "array"
   | "boolean"
-  | "function";
+  | "function"
+  | "null";
 
 export const TYPE_STRINGS: string[] = [
   "number",
@@ -76,6 +77,7 @@ export const TYPE_STRINGS: string[] = [
   "object",
   "array",
   "function",
+  "null",
 ];
 
 /**
