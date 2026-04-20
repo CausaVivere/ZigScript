@@ -53,7 +53,9 @@ export type TYPE =
   | "array"
   | "boolean"
   | "function"
-  | "null";
+  | "null"
+  | "void"
+  | "noreturn";
 
 export const TYPE_STRINGS: string[] = [
   "number",
@@ -78,6 +80,8 @@ export const TYPE_STRINGS: string[] = [
   "array",
   "function",
   "null",
+  "void",
+  "noreturn",
 ];
 
 /**
@@ -101,7 +105,7 @@ export interface Program extends Statement {
 // var x: number = 5; -> TypeAnnotation
 export interface TypeAnnotation extends Statement {
   kind: "TypeAnnotation";
-  type: TYPE;
+  types: TYPE[];
   isArray: boolean;
   isOptional: boolean;
 }

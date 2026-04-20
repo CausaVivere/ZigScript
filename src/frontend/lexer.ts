@@ -24,6 +24,7 @@ export enum TokenType {
   BinaryOperator,
   ComparisonOperator,
   LogicalOperator,
+  Pipe,
   Bang, // !
   QuestionMark, // ?
   Semicolon,
@@ -253,11 +254,7 @@ export function tokenize(sourceCode: string): Token[] {
             token(op, TokenType.LogicalOperator, tokenStart, position),
           );
         } else {
-          fatalFmt(
-            tokenStart,
-            "Unrecognized character '|' at position %d",
-            position,
-          );
+          tokens.push(token("|", TokenType.Pipe, tokenStart, position));
         }
         break;
       case "?":

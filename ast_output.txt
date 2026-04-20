@@ -13,7 +13,9 @@
       },
       "type": {
         "kind": "TypeAnnotation",
-        "type": "number",
+        "types": [
+          "number"
+        ],
         "isArray": true,
         "isOptional": false,
         "start": 14,
@@ -235,7 +237,9 @@
               "name": "x",
               "type": {
                 "kind": "TypeAnnotation",
-                "type": "number",
+                "types": [
+                  "number"
+                ],
                 "isArray": false,
                 "isOptional": false,
                 "start": 294,
@@ -246,7 +250,9 @@
               "name": "y",
               "type": {
                 "kind": "TypeAnnotation",
-                "type": "number",
+                "types": [
+                  "number"
+                ],
                 "isArray": false,
                 "isOptional": false,
                 "start": 304,
@@ -272,11 +278,13 @@
           "name": "offset",
           "type": {
             "kind": "TypeAnnotation",
-            "type": "number",
+            "types": [
+              "number"
+            ],
             "isArray": false,
             "isOptional": true,
             "start": 264,
-            "end": 270
+            "end": 271
           }
         }
       ],
@@ -396,7 +404,9 @@
               "name": "x",
               "type": {
                 "kind": "TypeAnnotation",
-                "type": "number",
+                "types": [
+                  "number"
+                ],
                 "isArray": false,
                 "isOptional": false,
                 "start": 437,
@@ -407,7 +417,9 @@
               "name": "y",
               "type": {
                 "kind": "TypeAnnotation",
-                "type": "number",
+                "types": [
+                  "number"
+                ],
                 "isArray": false,
                 "isOptional": false,
                 "start": 447,
@@ -795,7 +807,9 @@
           "name": "i",
           "type": {
             "kind": "TypeAnnotation",
-            "type": "number",
+            "types": [
+              "number"
+            ],
             "isArray": false,
             "isOptional": false,
             "start": 776,
@@ -954,7 +968,9 @@
           "name": "n",
           "type": {
             "kind": "TypeAnnotation",
-            "type": "number",
+            "types": [
+              "number"
+            ],
             "isArray": false,
             "isOptional": false,
             "start": 1072,

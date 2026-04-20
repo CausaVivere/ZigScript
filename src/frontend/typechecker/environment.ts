@@ -1,12 +1,38 @@
 import { fatalFmt } from "../../utils";
 import type { Statement, TypeAnnotation } from "../ast";
 
+function isAssignable(source: TypeAnnotation, target: TypeAnnotation): boolean {
+  if (source.isArray !== target.isArray) {
+    return false;
+  }
+
+  if (source.isOptional && !target.isOptional) {
+    return false;
+  }
+
+  if (
+    source.isArray &&
+    source.types.length === 1 &&
+    source.types[0] === "array"
+  ) {
+    return true;
+  }
+
+  return source.types.every((type) => target.types.includes(type));
+}
+
+function formatType(annotation: TypeAnnotation): string {
+  const typeList = annotation.types.join(" | ");
+  const arraySuffix = annotation.isArray ? "[]" : "";
+  const optionalSuffix = annotation.isOptional ? "?" : "";
+  return `${typeList}${arraySuffix}${optionalSuffix}`;
+}
+
 export class TypeEnvironment {
   private parent?: TypeEnvironment;
   private variables: Map<string, TypeAnnotation>;
 
   constructor(parentENV?: TypeEnvironment) {
-    const global = parentENV ? true : false;
     this.parent = parentENV;
     this.variables = new Map();
   }
@@ -37,13 +63,13 @@ export class TypeEnvironment {
 
     if (env.variables.has(varName)) {
       const existingType = env.variables.get(varName)!;
-      if (existingType.type !== value.type) {
+      if (!isAssignable(value, existingType)) {
         fatalFmt(
           astNode?.start ?? 0,
           "Type mismatch: cannot assign %s to variable %s of type %s.",
-          value.type,
+          formatType(value),
           varName,
-          existingType.type,
+          formatType(existingType),
         );
       }
     }

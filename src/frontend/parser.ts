@@ -26,6 +26,7 @@ import {
 } from "./ast.ts";
 import { tokenize, type Token, TokenType } from "./lexer";
 import type { TYPE } from "./ast";
+import { validateTypeString } from "./typechecker/checker.ts";
 
 export default class Parser {
   private tokens: Token[] = [];
@@ -790,107 +791,137 @@ export default class Parser {
   }
 
   private validate_type(type: string): boolean {
-    return TYPE_STRINGS.includes(type);
+    return validateTypeString(type);
   }
 
   private parse_type_annotation(): TypeAnnotation | undefined {
     if (this.at().type === TokenType.Colon) {
       this.eat(); // eat the colon
 
-      const typeToken = this.expect(
-        TokenType.Identifier,
-        "Expected type identifier in type annotation.",
-      );
-
-      let isArray = false;
-
-      if (this.at().type === TokenType.OpenBracket) {
-        this.eat(); // eat the open bracket
-
-        this.expect(
-          TokenType.CloseBracket,
-          "Expected closing bracket for array type annotation.",
-        );
-
-        isArray = true;
-      }
-
-      if (typeToken.value === "array") {
-        const op = this.expect(
-          TokenType.ComparisonOperator,
-          "Expected item type for array annotation, e.g. array<string>",
-        );
-        if (op.value !== "<") {
-          fatalFmt(
-            op.start,
-            "Expected '<' after 'array' in type annotation, got '%s'",
-            op.value,
-          );
-        }
-
-        const itemTypeToken = this.expect(
+      const parseSingleType = (): {
+        type: TYPE;
+        isArray: boolean;
+        start: number;
+        end: number;
+      } => {
+        const typeToken = this.expect(
           TokenType.Identifier,
-          "Expected item type identifier in array type annotation.",
+          "Expected type identifier in type annotation.",
         );
 
-        if (!this.validate_type(itemTypeToken.value)) {
-          fatalFmt(
-            itemTypeToken.start,
-            "Invalid type '%s' in array type annotation.",
-            itemTypeToken.value,
+        if (typeToken.value === "array") {
+          const open = this.expect(
+            TokenType.ComparisonOperator,
+            "Expected item type for array annotation, e.g. array<string>",
           );
+
+          if (open.value !== "<") {
+            fatalFmt(
+              open.start,
+              "Expected '<' after 'array' in type annotation, got '%s'",
+              open.value,
+            );
+          }
+
+          const itemTypeToken = this.expect(
+            TokenType.Identifier,
+            "Expected item type identifier in array type annotation.",
+          );
+
+          if (!this.validate_type(itemTypeToken.value)) {
+            fatalFmt(
+              itemTypeToken.start,
+              "Invalid type '%s' in array type annotation.",
+              itemTypeToken.value,
+            );
+          }
+
+          const close = this.expect(
+            TokenType.ComparisonOperator,
+            "Expected '>' after item type in array annotation.",
+          );
+
+          if (close.value !== ">") {
+            fatalFmt(
+              close.start,
+              "Expected '>' after item type in array annotation, got '%s'",
+              close.value,
+            );
+          }
+
+          return {
+            type: itemTypeToken.value as TYPE,
+            isArray: true,
+            start: typeToken.start,
+            end: close.end,
+          };
         }
 
-        const closingOp = this.expect(
-          TokenType.ComparisonOperator,
-          "Expected '>' after item type in array annotation.",
-        );
-        if (closingOp.value !== ">") {
-          fatalFmt(
-            closingOp.start,
-            "Expected '>' after item type in array annotation, got '%s'",
-            closingOp.value,
+        let isArray = false;
+        let end = typeToken.end;
+
+        if (this.at().type === TokenType.OpenBracket) {
+          this.eat();
+          const closeBracket = this.expect(
+            TokenType.CloseBracket,
+            "Expected closing bracket for array type annotation.",
           );
+          isArray = true;
+          end = closeBracket.end;
         }
 
-        const isOptional = this.at().type === TokenType.QuestionMark;
-
-        if (isOptional) {
-          this.eat(); // eat the question mark
+        if (!this.validate_type(typeToken.value)) {
+          fatalFmt(
+            typeToken.start,
+            "Invalid type '%s' in type annotation.",
+            typeToken.value,
+          );
         }
 
         return {
-          kind: "TypeAnnotation",
-          type: itemTypeToken.value,
-          isArray: true,
-          isOptional,
+          type: typeToken.value as TYPE,
+          isArray,
           start: typeToken.start,
-          end: closingOp.end,
-        } as TypeAnnotation;
+          end,
+        };
+      };
+
+      const first = parseSingleType();
+      const types: TYPE[] = [first.type];
+      const isArray = first.isArray;
+      let end = first.end;
+
+      while (this.at().type === TokenType.Pipe) {
+        this.eat();
+        const next = parseSingleType();
+
+        if (next.isArray !== isArray) {
+          fatalFmt(
+            this.at().start,
+            "Mixed array and non-array union types are not supported yet.",
+          );
+        }
+
+        if (!types.includes(next.type)) {
+          types.push(next.type);
+        }
+
+        end = next.end;
       }
 
-      let isOptional = false;
+      const isOptional = this.at().type === TokenType.QuestionMark;
 
-      if (this.at().type === TokenType.QuestionMark) {
-        this.eat(); // eat the question mark
-        isOptional = true;
-      }
-
-      if (!this.validate_type(typeToken.value)) {
-        fatalFmt(
-          typeToken.start,
-          "Invalid type '%s' in type annotation.",
-          typeToken.value,
-        );
+      if (isOptional) {
+        end = this.eat().end;
       }
 
       return {
         kind: "TypeAnnotation",
-        type: typeToken.value,
+        types,
         isArray,
         isOptional,
-        start: typeToken.start,
-        end: typeToken.end,
+        start: first.start,
+        end,
       } as TypeAnnotation;
     }
     return undefined;
